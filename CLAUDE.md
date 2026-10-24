@@ -6,6 +6,8 @@ A habit app where you're a public company ($CAL). The spec is the Claude Doc "Yo
 
 Spec build phase 1, plus a plain (non-staged) earnings call so the week can settle. Single-file PWA, the same pattern as `tape-wall`: `index.html`, `manifest.json`, `sw.js`, `icons/`. All state is one localStorage key (`youinc-v1`), with export/import JSON in Setup. Dev server: `you-inc` in `VibeHouse/.claude/launch.json` (port 8936).
 
+Hosted on GitHub Pages at https://calmac300-cmyk.github.io/you-inc/ from `main` / root of the public repo `calmac300-cmyk/you-inc`. Pushing to `main` deploys. The service worker is network-first, so the phone picks up a new version on its next online open.
+
 Defaults chosen for the spec's open questions [2026-10-23]:
 - The week runs Saturday to Friday. The call opens Fri 6pm and auto-reports Mon 9am. Anything logged before you hold the call counts for that week.
 - All segment weights are 1, and they're editable in Setup.
