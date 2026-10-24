@@ -113,6 +113,7 @@ const KEY = 'youinc-v1';
 const HOUR = 3600e3, DAY = 24 * HOUR, WEEK = 7 * DAY;
 const CALL_OPENS = 6 * HOUR;               // before nominal end (Fri 6pm)
 const AUTO_REPORT = 2 * DAY + 9 * HOUR;    // after nominal end (Mon 9am)
+const BACKUP_NUDGE = 14 * DAY;
 
 const FUNDS = [
   {id:'sloth', name:'Sloth Capital', vice:'Laziness', color:'#a395ff'},
@@ -434,6 +435,7 @@ const A = {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], {type: 'application/json'}));
     a.download = `you-inc-backup-${dkey(Date.now())}.json`; a.click();
+    S.lastExport = Date.now(); save(); render();
   },
   importData() { document.getElementById('imp').click(); },
   reset() { if (!confirm('Delist $CAL and start over? This erases everything.')) return; S = fresh(); save(); tab = 'floor'; render(); },
@@ -509,6 +511,8 @@ function renderFloor() {
     const missing = segs.filter(s => s.type !== 'count' && !wlogs(w).some(l => l.seg === s.id && l.kind === 'progress' && l.date === today));
     h += `<div class="banner"><span><b>Close the books.</b> ${missing.length ? 'Not logged today: ' + missing.map(s => esc(s.name)).join(', ') + '.' : 'Everything logged today.'}</span><button class="btn sm" data-a="closeBooks">Closed</button></div>`;
   }
+  const sinceBackup = now - (S.lastExport || S.weeks[0].start);
+  if (sinceBackup >= BACKUP_NUDGE) h += `<div class="banner"><span><b>Back up your books.</b> ${S.lastExport ? `Last export ${Math.floor(sinceBackup / DAY)} days ago.` : 'No backup yet.'}</span><button class="btn sm" data-a="exportData">Export</button></div>`;
   if (now >= w.nominalEnd - CALL_OPENS) h += `<div class="banner"><span><b>Earnings call is open.</b> Hold it before Monday 9am.</span><button class="btn sm primary" data-a="tab" data-id="call">Go</button></div>`;
   h += `<h2>Segments</h2><div class="grid">${segs.map(s => segCard(w, s, now)).join('')}</div>`;
   h += `<h2>File a disclosure</h2><div class="discs">${DISCLOSURES.map(d => `<button class="disc" data-a="disclose" data-id="${d.id}">${esc(d.label)}</button>`).join('')}</div>`;
@@ -608,7 +612,7 @@ function renderSetup() {
     ${s.type === 'cap' ? `<label>Cap (hours)<input type="number" step="0.5" min="0" data-seg="${s.id}" data-field="cap" value="${s.cap ?? 3}"></label>` : '<span></span>'}
     <div class="full"><button class="btn sm" data-a="retire" data-id="${s.id}">${s.active ? 'Retire' : 'Reinstate'}</button></div></div>`).join('')}</div>
     <p style="margin-top:10px"><button class="btn sm" data-a="addSeg">+ Add segment</button></p>
-    <h2>Backup</h2><p class="dim" style="font-size:13px;margin-top:0">Everything lives in this browser on this device. Export now and then.</p>
+    <h2>Backup</h2><p class="dim" style="font-size:13px;margin-top:0">Everything lives in this browser on this device. Last backup: ${S.lastExport ? `${new Date(S.lastExport).toLocaleDateString([], {month: 'short', day: 'numeric'})} (${Math.floor((Date.now() - S.lastExport) / DAY)} days ago)` : 'never'}. The Floor reminds you after two weeks.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-a="exportData">Export backup</button><button class="btn sm" data-a="importData">Import backup</button><button class="btn sm" style="color:var(--down)" data-a="reset">Reset</button></div>
     <input type="file" id="imp" accept="application/json,.json" hidden>`;
   return h;
