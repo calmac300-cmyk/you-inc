@@ -13,6 +13,8 @@ Defaults chosen for the spec's open questions [2026-10-23]:
 - All segment weights are 1, and they're editable in Setup.
 - Fund lines are hand-written templates in `LINES`. No LLM, no Discord.
 
+Added past the spec [2026-10-24]: a fifth fund, Bedhead Holdings, shorting a "Getting ready" daily segment (shower/shave/skincare as one tap), with a "Slept in" disclosure. `migrate()` pushes any `DEFAULT_SEGMENTS` entry missing by id into existing installs, so new default segments reach the phone without a reset.
+
 Deviations from the spec:
 - Intraweek drift uses `share × (pace − 1)` (a deficit as a fraction of guidance) instead of raw pace, so Monday morning doesn't open deep red.
 - Baselines are normalized by week length, so a short IPO week doesn't drag them down.

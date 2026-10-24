@@ -148,6 +148,7 @@ const FUNDS = [
   {id:'gluttony', name:'Gluttony Partners', vice:'Overeating', color:'#ff9f43'},
   {id:'doom', name:'Doomscroll Holdings', vice:'Distraction', color:'#ff5c8a'},
   {id:'ignorant', name:'Ignorant Inc.', vice:'Not learning', color:'#2ec4b6'},
+  {id:'bedhead', name:'Bedhead Holdings', vice:'Rolling out of bed as-is', color:'#7ec8ff'},
 ];
 
 // type: count = +1 per tap, daily = once per day, cap = nightly hours, a day counts if under cap
@@ -158,6 +159,7 @@ const DEFAULT_SEGMENTS = [
   {id:'nutrition', name:'Nutrition', unit:'good days', type:'daily', fund:'gluttony', weight:1, base:4, active:true},
   {id:'language', name:'Language', unit:'study days', type:'daily', fund:'ignorant', weight:1, base:3, active:true},
   {id:'reading', name:'Reading', unit:'reading days', type:'daily', fund:'ignorant', weight:1, base:4, active:true, milestone:'Finished a book'},
+  {id:'ready', name:'Getting ready', unit:'ready days', type:'daily', fund:'bedhead', weight:1, base:5, active:true},
 ];
 
 const DISCLOSURES = [
@@ -166,6 +168,7 @@ const DISCLOSURES = [
   {id:'binge', label:'Binge scroll', fund:'doom'},
   {id:'limit', label:'App limit disabled', fund:'doom'},
   {id:'skipstudy', label:'Skipped study', fund:'ignorant'},
+  {id:'slept', label:'Slept in', fund:'bedhead'},
 ];
 
 const LINES = {
@@ -221,6 +224,19 @@ const LINES = {
     doubledown: ["More studying? Gross. Adding to the short."],
     skip: ["Skipped the call. We also don't attend things. Respect."],
     milestone: ["A whole book? We're... reviewing our position.", "Finished a book. Disgusting. Retreating slightly."],
+  },
+  bedhead: {
+    open: ["*yawns* Short on {segs}. Wake us if anything happens.", "Opened a {segs} short from bed. Didn't even sit up."],
+    openBold: ["Ready every day? Every day?? We'll short that from under the covers."],
+    disclosure: ["Slept in. Beautiful. Pillow creases are a lifestyle.", "Five more minutes became fifty. Our favorite trade."],
+    behind: ["{segs} behind pace. The hair is winning.", "Haven't seen you shower in a while. Bullish for us."],
+    ahead: ["Showered again? Mm. Bit much.", "Up and ready on {segs}. Unsettling. Back to sleep."],
+    midweek: ["Adding to the {segs} short. Wednesday mornings are made for the snooze button."],
+    gloat: ["A whole week in yesterday's hoodie. Profitable and cozy.", "Rolled out of bed, rolled in the profits."],
+    retract: ["Fine. You're presentable. We retract, groggily.", "Covered the {segs} short. Someone get us a coffee."],
+    cut: ["Guidance cut. Lowering the bar to pillow height."],
+    doubledown: ["Raising {segs}? Before noon? Adding to the short. Then napping."],
+    skip: ["Skipped the call. Slept through it? Respect."],
   },
 };
 const GENERIC = {milestone: ["A milestone. Noted, reluctantly."]};
@@ -481,12 +497,13 @@ function editSeg(el) {
 }
 
 // ---------- render ----------
-const CODES = {sloth: 'SLTH', gluttony: 'GLTN', doom: 'DOOM', ignorant: 'IGNR'};
+const CODES = {sloth: 'SLTH', gluttony: 'GLTN', doom: 'DOOM', ignorant: 'IGNR', bedhead: 'BDHD'};
 const AVATARS = {
   sloth: '<circle cx="16" cy="17" r="11"/><ellipse cx="11.5" cy="16.5" rx="3.6" ry="2.6" transform="rotate(-18 11.5 16.5)"/><ellipse cx="20.5" cy="16.5" rx="3.6" ry="2.6" transform="rotate(18 20.5 16.5)"/><path d="M10 17h3M19 17h3M14 22.5q2 1.4 4 0M23 2.5h4l-4 4h4"/>',
   gluttony: '<circle cx="16" cy="15" r="10.5"/><path d="M10.5 12.5q2-2.2 4 0M17.5 12.5q2-2.2 4 0M11 17.5h10q0 5.5-5 5.5t-5-5.5zM12 26.5l4 4 4-4"/>',
   doom: '<rect x="8.5" y="2.5" width="15" height="27" rx="3"/><circle cx="13" cy="12" r="2.6"/><circle cx="19" cy="12" r="2.6"/><circle cx="13.6" cy="12.6" r="1" fill="currentColor"/><circle cx="19.6" cy="12.6" r="1" fill="currentColor"/><path d="M11.2 19.5l1.8 1.8 1.8-1.8 1.8 1.8 1.8-1.8 1.8 1.8M14 26h4"/>',
   ignorant: '<path d="M10.5 12 16 1.5 21.5 12z"/><circle cx="16" cy="20.5" r="8.5"/><circle cx="13" cy="19" r="1" fill="currentColor"/><circle cx="19" cy="19" r="1" fill="currentColor"/><path d="M12.5 24h7M15 24v1.8a1.5 1.5 0 0 0 3 0V24"/>',
+  bedhead: '<circle cx="16" cy="19" r="10"/><path d="M7.5 14 8 7l3.5 4L13 3.5l3.5 5.5L19 4l1.5 6.5L24.5 7l-.5 7M11 18.5q1.5 1 3 0M18 18.5q1.5 1 3 0"/><ellipse cx="16" cy="24" rx="2" ry="2.4"/>',
 };
 function avatar(fid, size) {
   const f = fundById(fid);
@@ -726,7 +743,19 @@ document.addEventListener('change', e => {
   }
 });
 
-catchUp(); evaluate(); save(); render();
+// default segments added after launch reach existing installs here (a retired one keeps its id, so it isn't re-added)
+function migrate() {
+  DEFAULT_SEGMENTS.forEach(d => {
+    if (S.segments.some(s => s.id === d.id)) return;
+    S.segments.push({...d});
+    const w = cur();
+    if (w) w.guidance[d.id] = {target: d.base, baseline: d.base, moonshot: false};
+    const f = fundById(d.fund);
+    if (f && !S.segments.some(s => s.id !== d.id && s.fund === f.id)) say(f.id, 'open', [d]);
+  });
+}
+
+migrate(); catchUp(); evaluate(); save(); render();
 setInterval(() => { hlIdx++; catchUp(); evaluate(); renderTicker(); }, 6000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { catchUp(); evaluate(); render(); } });
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
