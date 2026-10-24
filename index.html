@@ -444,8 +444,9 @@ function editSeg(el) {
   if (f === 'weight' || f === 'base' || f === 'cap') v = parseFloat(v) || 0;
   s[f] = v;
   const w = cur();
-  if (f === 'base' && w && w.free && w.guidance[s.id]) w.guidance[s.id].baseline = v;
-  save(); if (f === 'type') render();
+  // in IPO week the baseline is still a guess, so it sets this week's target too
+  if (f === 'base' && w && w.free && w.guidance[s.id]) Object.assign(w.guidance[s.id], {baseline: v, target: Math.max(1, Math.round(v))});
+  save(); if (el.tagName === 'SELECT') render();
 }
 
 // ---------- render ----------
@@ -488,6 +489,7 @@ function segCard(w, s, now) {
   if (s.type === 'daily' && todays.length) tag = '<span class="tag today">✓ TODAY</span>';
   if (s.type === 'cap' && todays.length) tag = `<span class="tag ${todays[0].value <= s.cap ? 'today' : 'sandbag'}">${todays[0].value}h TODAY</span>`;
   if (g.moonshot) tag += ' <span class="tag bold">MOON</span>';
+  if (+s.weight !== 1) tag += ` <span class="tag">×${+s.weight} WEIGHT</span>`;
   const head = `<div class="name">${esc(s.name)}</div>
     <div class="prog">${p}<small> / ${g.target}</small></div>
     <div class="unit">${esc(s.unit)}${s.type === 'cap' ? ` · cap ${s.cap}h` : ''}</div><div>${tag}</div>`;
@@ -593,7 +595,10 @@ function renderCall() {
 function renderSetup() {
   const fundOpts = v => FUNDS.map(f => `<option value="${f.id}" ${f.id === v ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
   const typeOpts = v => [['count', 'Count (tap +1)'], ['daily', 'Once a day'], ['cap', 'Hours under a cap']].map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
-  let h = `<h2>Segments</h2><div class="list">${S.segments.map(s => `<div class="seg-edit" style="${s.active ? '' : 'opacity:.5'}">
+  const w = cur();
+  let h = `<h2>Segments</h2><p class="dim" style="font-size:13px;margin-top:0">${w && w.free
+    ? 'IPO week: the starting baseline also sets this week\'s target.'
+    : 'Baseline changes count from next week. This week\'s targets live on the Call tab.'}</p><div class="list">${S.segments.map(s => `<div class="seg-edit" style="${s.active ? '' : 'opacity:.5'}">
     <label class="full">Name<input data-seg="${s.id}" data-field="name" value="${esc(s.name)}"></label>
     <label>Unit<input data-seg="${s.id}" data-field="unit" value="${esc(s.unit)}"></label>
     <label>Logging<select data-seg="${s.id}" data-field="type">${typeOpts(s.type)}</select></label>
@@ -625,8 +630,9 @@ document.addEventListener('click', e => {
   if (b.type === 'checkbox') e.preventDefault();
   A[a](b.dataset.id, b.dataset.d ? +b.dataset.d : undefined);
 });
+document.addEventListener('input', e => { if (e.target.dataset.seg && e.target.tagName === 'INPUT') editSeg(e.target); });
 document.addEventListener('change', e => {
-  if (e.target.dataset.seg) editSeg(e.target);
+  if (e.target.dataset.seg && e.target.tagName === 'SELECT') editSeg(e.target);
   if (e.target.id === 'imp' && e.target.files[0]) {
     e.target.files[0].text().then(t => {
       try { const s = JSON.parse(t); if (s.v !== 1 || !s.weeks) throw 0; if (!confirm('Replace everything with this backup?')) return; S = s; save(); render(); toast('Backup restored.'); }
