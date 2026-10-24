@@ -3,104 +3,131 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0f0c">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>You, Inc.</title>
 <style>
-:root{--bg:#0b0f0c;--panel:#131a15;--panel2:#18211b;--line:#223027;--text:#e6efe8;--dim:#7f9186;--up:#2bd47d;--down:#ff5c5c;--amber:#ffb84d;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+:root{--bg:#050706;--panel:#0b0f0d;--panel2:#121a16;--line:#1d2822;--text:#d9e4dd;--dim:#6c8076;--up:#1fe08a;--down:#ff4a4a;--amber:#ffaf1a;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+html,body{margin:0;background:var(--bg);color:var(--text);font:13.5px/1.45 var(--mono)}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
-input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;min-width:0}
-.wrap{max-width:520px;margin:0 auto;padding:0 14px}
-.mono{font-family:var(--mono)}
-.dim{color:var(--dim)}
-.up{color:var(--up)}.down{color:var(--down)}.amber{color:var(--amber)}
-h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:22px 0 8px;font-weight:600}
+input,select{font:inherit;color:var(--text);background:#000;border:1px solid var(--line);border-radius:2px;padding:8px;min-width:0}
+input:focus,select:focus{outline:none;border-color:var(--amber)}
+.wrap{max-width:520px;margin:0 auto;padding:0 12px}
+.dim{color:var(--dim)}.up{color:var(--up)}.down{color:var(--down)}.amber{color:var(--amber)}
+.grow{flex:1;min-width:0}
+h2{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin:20px 0 6px;font-weight:600}
+h2::after{content:"";flex:1;border-top:1px solid var(--line)}
 
 /* ticker */
-header.tick{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 0 8px}
-.tick-row{display:flex;align-items:center;gap:10px}
-.sym{font:700 13px var(--mono);color:var(--amber)}
-.px{font:700 26px var(--mono);letter-spacing:-.02em}
-.chg{font:600 14px var(--mono)}
+header.tick{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--amber);padding-top:env(safe-area-inset-top)}
+.tick-row{display:flex;align-items:center;gap:10px;padding:10px 0 6px}
+.sym{font-weight:700;font-size:12px;color:#000;background:var(--amber);padding:1px 5px}
+.px{font-weight:700;font-size:28px;letter-spacing:-.02em;padding:0 4px;margin:0 -4px}
+.px.blink-up{animation:bu .9s}.px.blink-down{animation:bd .9s}
+@keyframes bu{0%,35%{background:var(--up);color:#000}100%{background:transparent}}
+@keyframes bd{0%,35%{background:var(--down);color:#000}100%{background:transparent}}
+.chg{font-weight:600;font-size:13px}
 .tick-row svg{margin-left:auto}
-.tick-meta{display:flex;justify-content:space-between;gap:10px;font:12px var(--mono);color:var(--dim);margin-top:4px}
-.headline{font-size:13px;margin-top:6px;min-height:2.6em;color:#cfdad2}
-.headline b{color:var(--amber);font-weight:600}
+.tape{overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -12px;white-space:nowrap;font-size:11px;background:#000;text-transform:uppercase}
+.tape-in{display:inline-block;padding:4px 0;animation:tape 45s linear infinite}
+.ti{padding:0 14px;border-right:1px solid var(--line)}
+@keyframes tape{to{transform:translateX(-50%)}}
+.tick-meta{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--dim);margin-top:6px;text-transform:uppercase;letter-spacing:.04em}
+.headline{font-size:12.5px;margin:4px 0 8px;min-height:2.9em;color:#c4d1c9;display:flex;gap:8px;align-items:flex-start}
+.headline b{font-weight:700;letter-spacing:.05em}
 
-/* cards */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;position:relative}
-.seg{text-align:left;width:100%;min-height:118px;display:flex;flex-direction:column;gap:4px}
-.seg:active{background:var(--panel2)}
-.seg .name{font-weight:600}
-.seg .prog{font:700 22px var(--mono)}
-.seg .prog small{font-size:13px;color:var(--dim);font-weight:400}
-.seg .unit{font-size:12px;color:var(--dim)}
-.seg.done{border-color:#2bd47d55}
-.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:auto}
-.bar i{display:block;height:100%;background:var(--up)}
-.bar.behind i{background:var(--down)}
-.tag{font:600 10px var(--mono);letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
-.tag.today{background:#2bd47d22;color:var(--up)}
-.tag.bold{background:#ffb84d22;color:var(--amber)}
-.tag.sandbag{background:#ff5c5c22;color:var(--down)}
-.flash{position:absolute;top:36px;right:10px;font:700 14px var(--mono);animation:fl 1.4s forwards}
+/* segments */
+.panel{border:1px solid var(--line);background:var(--panel)}
+.srow{position:relative;border-top:1px solid var(--line)}
+.srow:first-child{border-top:0}
+.stap{display:grid;grid-template-columns:1fr auto 84px 14px;align-items:center;column-gap:10px;row-gap:2px;width:100%;text-align:left;padding:11px 12px;transition:background .15s,transform .08s}
+button.stap:active{background:var(--panel2);transform:scale(.985)}
+.sn{font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow.done .sn::before{content:"✓ ";color:var(--up)}
+.sv{font-weight:700;font-size:17px;text-align:right}
+.sv i{font-style:normal;color:var(--dim);font-size:12px;font-weight:400}
+.ss{grid-column:1/-1;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em}
+.blocks{display:block;height:9px;position:relative;background:repeating-linear-gradient(90deg,var(--line) 0 5px,transparent 5px 7px)}
+.blocks i{position:absolute;top:0;bottom:0;left:0;background:repeating-linear-gradient(90deg,var(--c,var(--amber)) 0 5px,transparent 5px 7px);transition:width .4s}
+.sx{display:flex;gap:6px;padding:0 12px 11px}
+.sx input{flex:1;padding:7px}
+.kbtn{border:1px solid var(--line);background:#000;padding:6px 10px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border-radius:2px;transition:transform .08s}
+.kbtn:active{transform:scale(.96);background:var(--panel2)}
+.flash{position:absolute;top:34px;right:12px;font-weight:700;font-size:12px;padding:1px 5px;animation:fl 1.4s forwards;pointer-events:none;z-index:2}
+.flash.up{background:var(--up);color:#000}.flash.down{background:var(--down);color:#000}
 @keyframes fl{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
-.cap-row{display:flex;gap:6px;margin-top:6px}
-.cap-row input{width:64px;padding:6px}
-.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:600}
-.btn.sm{padding:5px 9px;font-size:13px;border-radius:8px}
-.btn.primary{background:var(--amber);color:#1a1205;border-color:var(--amber)}
-.btn.wide{width:100%;padding:14px;font-size:16px}
+
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:9px 12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:12px;transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn.sm{padding:6px 9px;font-size:11px}
+.btn.primary{background:var(--amber);color:#000;border-color:var(--amber)}
+.btn.wide{width:100%;padding:14px;font-size:14px}
 .btn:disabled{opacity:.4}
-.link{color:var(--dim);font-size:12px;text-decoration:underline}
-.discs{display:flex;flex-wrap:wrap;gap:8px}
-.disc{border:1px solid #ff5c5c55;color:#ffb3b3;border-radius:999px;padding:7px 12px;font-size:13px}
-.disc:active{background:#ff5c5c22}
-.banner{background:#ffb84d14;border:1px solid #ffb84d44;border-radius:12px;padding:10px 12px;margin-top:14px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
-.list{background:var(--panel);border:1px solid var(--line);border-radius:14px}
-.list .row{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);font-size:14px}
+.discs{display:flex;flex-wrap:wrap;gap:6px}
+.disc{border:1px solid #ff4a4a66;color:#ff8a8a;padding:7px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;border-radius:2px;transition:transform .08s}
+.disc::before{content:"▼ "}
+.disc:active{background:var(--down);color:#000;transform:scale(.96)}
+.banner{border:1px solid var(--line);border-left:3px solid var(--amber);background:var(--panel);padding:9px 10px;margin-top:12px;font-size:12.5px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner b{color:var(--amber);text-transform:uppercase;letter-spacing:.04em}
+.list{background:var(--panel);border:1px solid var(--line)}
+.list .row{display:flex;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line);font-size:12.5px}
 .list .row:first-child{border-top:0}
-.row .grow{flex:1;min-width:0}
 .feed .row{align-items:flex-start}
-.feed .who{font-weight:600;font-size:12px}
-.feed time{font:11px var(--mono);color:var(--dim);white-space:nowrap}
-.x{color:var(--dim);font-size:18px;padding:0 4px}
+.who{font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.feed time{font-size:10.5px;color:var(--dim);white-space:nowrap}
+.x{color:var(--dim);font-size:16px;padding:0 4px}
+.av{flex:none;display:block}
+.tag{font-weight:600;font-size:10px;letter-spacing:.06em;padding:1px 5px;border:1px solid var(--line);color:var(--dim)}
+.tag.bold{color:var(--amber);border-color:#ffaf1a66}
+.tag.sandbag{color:var(--down);border-color:#ff4a4a66}
+.card{background:var(--panel);border:1px solid var(--line);padding:12px}
+.caps{font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 
 /* funds */
-.fund{margin-bottom:10px}
-.fund .top{display:flex;justify-content:space-between;align-items:baseline}
-.fund .fname{font-weight:700}
-.meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:8px 0 4px}
-.meter i{display:block;height:100%}
-.fund .quote{font-size:13px;color:#cfdad2;margin-top:6px;font-style:italic}
+.fund{border:1px solid var(--line);background:var(--panel);padding:12px;margin-bottom:8px}
+.fhead{display:flex;gap:12px;align-items:center}
+.fname{font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.fsub{font-size:11px;color:var(--dim);text-transform:uppercase}
+.fpos{text-align:right;font-weight:700;font-size:16px;white-space:nowrap}
+.fpos small{display:block;font-size:10px;color:var(--dim);font-weight:400;letter-spacing:.08em}
+.fmeter{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-top:10px;font-size:11px;color:var(--dim);text-transform:uppercase}
+.quote{font-size:12.5px;color:#c4d1c9;margin-top:8px;border-left:2px solid var(--line);padding-left:8px}
 
 /* call */
-.stamp{font:800 11px var(--mono);letter-spacing:.08em;padding:3px 7px;border-radius:4px;border:1.5px solid}
+.stamp{font-weight:700;font-size:11px;letter-spacing:.1em;padding:3px 7px;border:3px double;transform:rotate(-4deg);display:inline-block;white-space:nowrap}
 .stamp.BEAT{color:var(--up)}.stamp.MISS{color:var(--down)}.stamp.IN{color:var(--amber)}
-.big{font:700 34px var(--mono)}
-.step{display:flex;align-items:center;gap:8px}
-.step .btn{width:34px;height:34px;padding:0}
-.step .val{font:700 18px var(--mono);min-width:28px;text-align:center}
-label.moon{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:4px}
+.big{font-weight:700;font-size:38px;letter-spacing:-.02em}
+.anim .stamp{opacity:0;animation:stamp .4s var(--d) cubic-bezier(.2,.9,.3,1.3) forwards}
+.anim .reveal{opacity:0;animation:rise .4s var(--d) forwards}
+@keyframes stamp{0%{opacity:0;transform:scale(2.6) rotate(-14deg)}100%{opacity:1;transform:scale(1) rotate(-4deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.step{display:flex;align-items:center;gap:6px}
+.step .btn{width:34px;height:34px;padding:0;font-size:16px}
+.step .val{font-weight:700;font-size:17px;min-width:28px;text-align:center}
+label.moon{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:4px;text-transform:uppercase;margin-top:3px}
 
 /* setup */
 .seg-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;border-top:1px solid var(--line)}
 .seg-edit:first-child{border-top:0}
-.seg-edit label{font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:3px}
+.seg-edit label{font-size:10.5px;color:var(--dim);display:flex;flex-direction:column;gap:3px;text-transform:uppercase;letter-spacing:.04em}
 .seg-edit .full{grid-column:1/-1}
 
-nav{position:fixed;bottom:0;left:0;right:0;background:#0b0f0cf2;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:6}
-nav button{flex:1;max-width:130px;padding:12px 0 14px;font-size:13px;color:var(--dim);font-weight:600}
+nav{position:fixed;bottom:0;left:0;right:0;background:#000;border-top:1px solid var(--amber);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav button{flex:1;max-width:130px;padding:8px 0 11px;font-size:11px;color:var(--dim);font-weight:600;letter-spacing:.08em;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button b{font-size:10px;padding:0 4px;border:1px solid var(--line);color:var(--dim);font-weight:700}
 nav button.on{color:var(--amber)}
-nav button .dot{display:inline-block;width:6px;height:6px;border-radius:3px;background:var(--amber);margin-left:4px;vertical-align:middle}
-#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222c25;border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:9}
+nav button.on b{background:var(--amber);color:#000;border-color:var(--amber)}
+nav button .dot{display:inline-block;width:6px;height:6px;background:var(--amber);margin-left:4px;vertical-align:middle;animation:pulse 1.2s infinite alternate}
+@keyframes pulse{to{opacity:.2}}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#000;border:1px solid var(--line);border-left:3px solid var(--amber);padding:9px 12px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:9;text-transform:uppercase;letter-spacing:.03em}
 #toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.tape-in,.flash,.px,nav .dot{animation:none!important}.anim .stamp,.anim .reveal{animation:none!important;opacity:1!important}}
 </style>
 </head>
 <body>
@@ -366,7 +393,7 @@ function withFlash(segId, fn) {
   fn();
   const after = priceAt(w, Date.now() + 1);
   const d = after / before - 1;
-  if (segId) flash = {id: segId, text: pct(d), cls: d >= 0 ? 'up' : 'down', at: Date.now()};
+  if (segId) { flash = {id: segId, text: pct(d), cls: d >= 0 ? 'up' : 'down', at: Date.now()}; buzz(d >= 0 ? 15 : [20, 40, 20]); }
   evaluate(); save(); render();
 }
 const A = {
@@ -396,6 +423,7 @@ const A = {
     const w = cur(); if (!w) return toast('Set next week\'s guidance first.');
     const d = DISCLOSURES.find(x => x.id === id);
     withFlash(null, () => { addLog({kind: 'disclosure', disc: id, fund: d.fund, value: 1}); say(d.fund, 'disclosure'); });
+    buzz([30, 50, 30]);
     toast(`Disclosure filed: ${d.label} (−0.5%)`);
   },
   undo(id) { const l = S.logs.find(x => x.id === id); if (!l || !confirm('Remove this entry?')) return; S.logs = S.logs.filter(x => x !== l); evaluate(); save(); render(); },
@@ -415,7 +443,7 @@ const A = {
   moon(id) { const w = cur(); if (!w.free) return; w.guidance[id].moonshot = !w.guidance[id].moonshot; save(); render(); },
   hold() {
     const w = cur(); if (!w || Date.now() < w.nominalEnd - CALL_OPENS) return;
-    settle(w, Date.now(), true); S.pending = true; draft = null; save(); render(); window.scrollTo(0, 0);
+    settle(w, Date.now(), true); S.pending = true; draft = null; callAnim = true; revealAt = Date.now() + 20e3; save(); render(); window.scrollTo(0, 0);
   },
   dstep(id, d) { draft[id].target = Math.max(0, draft[id].target + d); render(); },
   dmoon(id) { draft[id].moonshot = !draft[id].moonshot; render(); },
@@ -452,6 +480,21 @@ function editSeg(el) {
 }
 
 // ---------- render ----------
+const CODES = {sloth: 'SLTH', gluttony: 'GLTN', doom: 'DOOM', ignorant: 'IGNR'};
+const AVATARS = {
+  sloth: '<circle cx="16" cy="17" r="11"/><ellipse cx="11.5" cy="16.5" rx="3.6" ry="2.6" transform="rotate(-18 11.5 16.5)"/><ellipse cx="20.5" cy="16.5" rx="3.6" ry="2.6" transform="rotate(18 20.5 16.5)"/><path d="M10 17h3M19 17h3M14 22.5q2 1.4 4 0M23 2.5h4l-4 4h4"/>',
+  gluttony: '<circle cx="16" cy="15" r="10.5"/><path d="M10.5 12.5q2-2.2 4 0M17.5 12.5q2-2.2 4 0M11 17.5h10q0 5.5-5 5.5t-5-5.5zM12 26.5l4 4 4-4"/>',
+  doom: '<rect x="8.5" y="2.5" width="15" height="27" rx="3"/><circle cx="13" cy="12" r="2.6"/><circle cx="19" cy="12" r="2.6"/><circle cx="13.6" cy="12.6" r="1" fill="currentColor"/><circle cx="19.6" cy="12.6" r="1" fill="currentColor"/><path d="M11.2 19.5l1.8 1.8 1.8-1.8 1.8 1.8 1.8-1.8 1.8 1.8M14 26h4"/>',
+  ignorant: '<path d="M10.5 12 16 1.5 21.5 12z"/><circle cx="16" cy="20.5" r="8.5"/><circle cx="13" cy="19" r="1" fill="currentColor"/><circle cx="19" cy="19" r="1" fill="currentColor"/><path d="M12.5 24h7M15 24v1.8a1.5 1.5 0 0 0 3 0V24"/>',
+};
+function avatar(fid, size) {
+  const f = fundById(fid);
+  return `<svg class="av" viewBox="0 0 32 32" width="${size}" height="${size}" style="color:${f.color}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${AVATARS[fid]}</svg>`;
+}
+function blocks(frac, color) { return `<span class="blocks"><i style="width:${clamp(frac, 0, 1) * 100}%;--c:${color}"></i></span>`; }
+const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function buzz(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
 function spark(vals, w, h, color) {
   if (vals.length < 2) vals = [vals[0] ?? 100, vals[0] ?? 100];
   const mn = Math.min(...vals), mx = Math.max(...vals), r = mx - mn || 1;
@@ -465,46 +508,64 @@ function weekSeries(w) {
   ts.push(now); ts.sort((a, b) => a - b);
   return ts.map(t => priceAt(w, t));
 }
-let hlIdx = 0;
+let hlIdx = 0, lastPx = null, lastTape = '', callAnim = false, after = [], revealAt = 0;
 function renderTicker() {
-  const w = last(), now = Date.now();
-  const p = S.pending ? w.close : priceAt(w, now), ch = Math.abs(p / w.open - 1) < 0.0005 ? 0 : p / w.open - 1;
+  const el = document.getElementById('ticker');
+  if (!el.firstChild) el.innerHTML = `<div class="tick-row"><span class="sym">$CAL</span><span class="px" id="px"></span><span class="chg" id="chg"></span><span id="spk"></span></div>
+    <div class="tape"><div class="tape-in" id="tape"></div></div><div class="tick-meta" id="meta"></div><div class="headline" id="hl"></div>`;
+  const w = last(), now = Date.now(), hush = S.pending && now < revealAt; // don't spoil the call while it plays
+  const p = !S.pending ? priceAt(w, now) : hush ? w.open : w.close, ch = Math.abs(p / w.open - 1) < 0.0005 ? 0 : p / w.open - 1;
+  const px = document.getElementById('px');
+  px.textContent = p.toFixed(2);
+  if (lastPx != null && Math.abs(p - lastPx) > 0.004 && !reduceMotion()) {
+    px.classList.remove('blink-up', 'blink-down'); void px.offsetWidth; px.classList.add(p > lastPx ? 'blink-up' : 'blink-down');
+  }
+  lastPx = p;
+  const chg = document.getElementById('chg');
+  chg.className = 'chg ' + (ch >= 0 ? 'up' : 'down');
+  chg.textContent = `${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch * 100).toFixed(1)}%`;
+  document.getElementById('spk').innerHTML = spark(weekSeries(w), 90, 30, ch >= 0 ? '#1fe08a' : '#ff4a4a');
+
+  const items = [];
+  if (S.pending) items.push('<span class="amber">Earnings call in progress</span>', hush ? 'Results coming in' : `Close ${money(w.close)}`);
+  else {
+    FUNDS.forEach(f => { const v = fundView(w, f, now); if (v.segs.length) items.push(`<span style="color:${f.color}">${CODES[f.id]}</span> $${v.pos.toFixed(1)}M short · smug ${v.smug}`); });
+    live(w).forEach(s => { const t = term(w, s, now); items.push(`${esc(s.name)} ${progress(w, s, now)}/${w.guidance[s.id].target} <span class="${t >= 0 ? 'up' : 'down'}">${t >= 0 ? '▲' : '▼'}</span>`); });
+  }
+  const tape = items.map(x => `<span class="ti">${x}</span>`).join('');
+  if (tape !== lastTape) { document.getElementById('tape').innerHTML = tape + tape; lastTape = tape; }
+
   let meta;
-  if (S.pending) meta = '<span class="amber">CALL IN PROGRESS · set guidance</span>';
-  else if (now >= w.nominalEnd - CALL_OPENS) meta = `<span class="amber">CALL OPEN</span><span>auto-reports in ${until(w.nominalEnd + AUTO_REPORT - now)}</span>`;
+  if (S.pending) meta = '<span class="amber">Call in progress · set guidance</span>';
+  else if (now >= w.nominalEnd - CALL_OPENS) meta = `<span class="amber">● Call open</span><span>auto-reports in ${until(w.nominalEnd + AUTO_REPORT - now)}</span>`;
   else meta = `<span>Week ${w.n}</span><span>call in ${until(w.nominalEnd - CALL_OPENS - now)}</span>`;
+  document.getElementById('meta').innerHTML = meta;
   const recent = S.feed.slice(-5).reverse(), h = recent[hlIdx % recent.length];
-  const who = h && h.fund ? `<b>${esc(fundById(h.fund).name)}:</b> ` : '';
-  document.getElementById('ticker').innerHTML = `
-    <div class="tick-row"><span class="sym">$CAL</span><span class="px">${p.toFixed(2)}</span>
-      <span class="chg ${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch * 100).toFixed(1)}%</span>
-      ${spark(weekSeries(w), 90, 30, ch >= 0 ? '#2bd47d' : '#ff5c5c')}</div>
-    <div class="tick-meta">${meta}</div>
-    <div class="headline">${h ? who + esc(h.text) : ''}</div>`;
+  document.getElementById('hl').innerHTML = hush ? `<span><b class="amber">$CAL</b> Week ${w.n} earnings call. Results coming in…</span>` : !h ? '' : h.fund
+    ? `${avatar(h.fund, 20)}<span><b style="color:${fundById(h.fund).color}">${CODES[h.fund]}</b> ${esc(h.text)}</span>`
+    : `<span><b class="amber">$CAL</b> ${esc(h.text)}</span>`;
 }
-function segCard(w, s, now) {
+function segRow(w, s, now) {
   const g = w.guidance[s.id], p = progress(w, s, now), t = term(w, s, now), today = dkey(now);
   const todays = wlogs(w).filter(l => l.seg === s.id && l.kind === 'progress' && l.date === today);
   const fl = flash && flash.id === s.id && now - flash.at < 1500 ? `<span class="flash ${flash.cls}">${flash.text}</span>` : '';
-  const fill = g.target ? clamp(p / g.target, 0, 1) * 100 : 100;
-  let tag = '';
-  if (s.type === 'daily' && todays.length) tag = '<span class="tag today">✓ TODAY</span>';
-  if (s.type === 'cap' && todays.length) tag = `<span class="tag ${todays[0].value <= s.cap ? 'today' : 'sandbag'}">${todays[0].value}h TODAY</span>`;
-  if (g.moonshot) tag += ' <span class="tag bold">MOON</span>';
-  if (+s.weight !== 1) tag += ` <span class="tag">×${+s.weight} WEIGHT</span>`;
-  const head = `<div class="name">${esc(s.name)}</div>
-    <div class="prog">${p}<small> / ${g.target}</small></div>
-    <div class="unit">${esc(s.unit)}${s.type === 'cap' ? ` · cap ${s.cap}h` : ''}</div><div>${tag}</div>`;
-  const bar = `<div class="bar ${t < -0.1 ? 'behind' : ''}"><i style="width:${fill}%"></i></div>`;
-  if (s.type === 'cap') return `<div class="card seg ${p >= g.target ? 'done' : ''}">${fl}${head}
-    <div class="cap-row"><input id="cap-${s.id}" type="number" inputmode="decimal" step="0.1" min="0" placeholder="hrs" value="${todays.length ? todays[0].value : ''}"><button class="btn sm" data-a="cap" data-id="${s.id}">Log</button></div>${bar}</div>`;
-  return `<div class="card seg ${p >= g.target ? 'done' : ''}" style="padding:0">
-    <button class="seg" style="padding:12px;background:none" data-a="tap" data-id="${s.id}">${fl}${head}${bar}</button>
-    ${s.milestone ? `<button class="link" style="position:absolute;right:10px;top:13px"data-a="milestone" data-id="${s.id}">${esc(s.milestone)}</button>` : ''}</div>`;
+  const sub = [esc(s.unit) + (s.type === 'cap' ? ` · cap ${s.cap}h` : '')];
+  if (s.type === 'daily' && todays.length) sub.push('<span class="up">✓ today</span>');
+  if (s.type === 'cap' && todays.length) sub.push(`<span class="${todays[0].value <= s.cap ? 'up' : 'down'}">${todays[0].value}h today</span>`);
+  if (g.moonshot) sub.push('<span class="amber">moon</span>');
+  if (+s.weight !== 1) sub.push(`×${+s.weight} weight`);
+  const done = p >= g.target;
+  const arrow = t > 0.02 ? '<span class="up">▲</span>' : t < -0.02 ? '<span class="down">▼</span>' : '<span class="dim">■</span>';
+  const main = `<span class="sn">${esc(s.name)}</span><span class="sv">${p}<i>/${g.target}</i></span>${blocks(g.target ? p / g.target : 1, done ? 'var(--up)' : t < -0.1 ? 'var(--down)' : 'var(--amber)')}${arrow}<span class="ss">${sub.join(' · ')}</span>`;
+  let extra = '';
+  if (s.type === 'cap') extra = `<div class="sx"><input id="cap-${s.id}" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Hours today" value="${todays.length ? todays[0].value : ''}"><button class="kbtn" data-a="cap" data-id="${s.id}">Log</button></div>`;
+  else if (s.milestone) extra = `<div class="sx"><button class="kbtn" data-a="milestone" data-id="${s.id}">+ ${esc(s.milestone)}</button></div>`;
+  const head = s.type === 'cap' ? `<div class="stap">${main}</div>` : `<button class="stap" data-a="tap" data-id="${s.id}">${main}</button>`;
+  return `<div class="srow ${done ? 'done' : ''}">${fl}${head}${extra}</div>`;
 }
 function renderFloor() {
   const w = cur(), now = Date.now();
-  if (!w) return `<div class="banner" style="margin-top:16px"><span>The call is in progress. Set next week's guidance to reopen the floor.</span><button class="btn sm primary" data-a="tab" data-id="call">Go</button></div>`;
+  if (!w) return `<div class="banner" style="margin-top:16px"><span><b>Call in progress.</b> Set next week's guidance to reopen the floor.</span><button class="btn sm primary" data-a="tab" data-id="call">Go</button></div>`;
   const segs = live(w), today = dkey(now);
   let h = '';
   if (new Date(now).getHours() >= 20 && S.booksClosed !== today) {
@@ -514,16 +575,16 @@ function renderFloor() {
   const sinceBackup = now - (S.lastExport || S.weeks[0].start);
   if (sinceBackup >= BACKUP_NUDGE) h += `<div class="banner"><span><b>Back up your books.</b> ${S.lastExport ? `Last export ${Math.floor(sinceBackup / DAY)} days ago.` : 'No backup yet.'}</span><button class="btn sm" data-a="exportData">Export</button></div>`;
   if (now >= w.nominalEnd - CALL_OPENS) h += `<div class="banner"><span><b>Earnings call is open.</b> Hold it before Monday 9am.</span><button class="btn sm primary" data-a="tab" data-id="call">Go</button></div>`;
-  h += `<h2>Segments</h2><div class="grid">${segs.map(s => segCard(w, s, now)).join('')}</div>`;
+  h += `<h2>Segments</h2><div class="panel">${segs.map(s => segRow(w, s, now)).join('')}</div>`;
   h += `<h2>File a disclosure</h2><div class="discs">${DISCLOSURES.map(d => `<button class="disc" data-a="disclose" data-id="${d.id}">${esc(d.label)}</button>`).join('')}</div>`;
   const todays = S.logs.filter(l => l.date === today && l.ts >= w.start).slice().reverse();
   if (todays.length) h += `<h2>Today's tape</h2><div class="list">${todays.map(l => {
     const s = l.seg && segById(l.seg);
-    const label = l.kind === 'disclosure' ? `<span class="down">Disclosure:</span> ${esc(DISCLOSURES.find(d => d.id === l.disc)?.label)}`
-      : l.kind === 'cut' ? `<span class="down">Guidance cut:</span> ${esc(s?.name)}`
-      : l.kind === 'milestone' ? `<span class="up">${esc(s?.milestone)}</span>`
-      : `${esc(s?.name)}${s?.type === 'cap' ? ` · ${l.value}h` : ''}`;
-    return `<div class="row"><span class="mono dim" style="font-size:12px">${new Date(l.ts).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</span><span class="grow">${label}</span>${l.kind === 'cut' ? '' : `<button class="x" data-a="undo" data-id="${l.id}" aria-label="Remove">×</button>`}</div>`;
+    const label = l.kind === 'disclosure' ? `<span class="down">▼ Disclosure</span> ${esc(DISCLOSURES.find(d => d.id === l.disc)?.label)}`
+      : l.kind === 'cut' ? `<span class="down">▼ Guidance cut</span> ${esc(s?.name)}`
+      : l.kind === 'milestone' ? `<span class="up">▲ ${esc(s?.milestone)}</span>`
+      : `<span class="up">▲</span> ${esc(s?.name)}${s?.type === 'cap' ? ` · ${l.value}h` : ''}`;
+    return `<div class="row"><span class="dim" style="font-size:11px">${new Date(l.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false})}</span><span class="grow">${label}</span>${l.kind === 'cut' ? '' : `<button class="x" data-a="undo" data-id="${l.id}" aria-label="Remove">×</button>`}</div>`;
   }).join('')}</div>`;
   h += `<h2>Wire</h2>${feedList(8)}`;
   return h;
@@ -531,7 +592,7 @@ function renderFloor() {
 function feedList(n) {
   return `<div class="list feed">${S.feed.slice(-n).reverse().map(e => {
     const f = e.fund && fundById(e.fund);
-    return `<div class="row"><div class="grow">${f ? `<div class="who" style="color:${f.color}">${esc(f.name)}</div>` : '<div class="who amber">$CAL</div>'}${esc(e.text)}</div><time>${clock(e.ts)}</time></div>`;
+    return `<div class="row">${f ? avatar(f.id, 24) : '<span class="sym" style="font-size:9px;margin-top:4px">$CAL</span>'}<div class="grow">${f ? `<div class="who" style="color:${f.color}">${esc(f.name)}</div>` : ''}${esc(e.text)}</div><time>${clock(e.ts)}</time></div>`;
   }).join('')}</div>`;
 }
 function renderFunds() {
@@ -542,65 +603,83 @@ function renderFunds() {
     if (!v.segs.length) return;
     const lastLine = S.feed.slice().reverse().find(e => e.fund === f.id);
     const mood = v.smug >= 75 ? 'Gloating' : v.smug >= 50 ? 'Smug' : v.smug >= 25 ? 'Nervous' : 'Sweating';
-    h += `<div class="card fund"><div class="top"><span class="fname" style="color:${f.color}">${esc(f.name)}</span><span class="mono dim">$${v.pos.toFixed(1)}M short</span></div>
-      <div class="dim" style="font-size:12px">${esc(f.vice)} · shorts ${v.segs.map(s => esc(s.name)).join(', ')}${w.midweek[f.id] ? ' · <span class="amber">added midweek</span>' : ''}</div>
-      <div class="meter"><i style="width:${v.smug}%;background:${f.color}"></i></div>
-      <div class="mono" style="font-size:12px">Smugness ${v.smug} · ${mood}</div>
+    h += `<div class="fund"><div class="fhead">${avatar(f.id, 44)}<div class="grow"><div class="fname" style="color:${f.color}">${esc(f.name)}</div>
+        <div class="fsub">${esc(f.vice)} · shorts ${v.segs.map(s => esc(s.name)).join(', ')}${w.midweek[f.id] ? ' · <span class="amber">added midweek</span>' : ''}</div></div>
+        <div class="fpos">$${v.pos.toFixed(1)}M<small>SHORT</small></div></div>
+      <div class="fmeter"><span>Smug</span>${blocks(v.smug / 100, f.color)}<span style="color:${f.color}">${v.smug} ${mood}</span></div>
       ${lastLine ? `<div class="quote">“${esc(lastLine.text)}”</div>` : ''}</div>`;
   });
   const closes = [100, ...S.weeks.filter(x => x.close != null).map(x => x.close)];
   if (!S.pending) closes.push(priceAt(w, now));
   const allTime = Math.max(...closes);
-  h += `<h2>$CAL since IPO</h2><div class="card"><div style="display:flex;justify-content:space-between" class="mono"><span>${money(closes[closes.length - 1])}</span><span class="dim">ATH ${money(allTime)}</span></div>
-    <div style="margin-top:8px">${spark(closes, 300, 70, '#ffb84d').replace('width="300"', 'width="100%"')}</div>
-    <div class="dim" style="font-size:12px;margin-top:4px">${S.weeks.length} week${S.weeks.length > 1 ? 's' : ''} listed · weekly candles come with the full earnings call</div></div>`;
+  h += `<h2>$CAL since IPO</h2><div class="card"><div style="display:flex;justify-content:space-between"><b>${money(closes[closes.length - 1])}</b><span class="dim caps">ATH ${money(allTime)}</span></div>
+    <div style="margin-top:8px">${spark(closes, 300, 70, '#ffaf1a').replace('width="300"', 'width="100%"')}</div>
+    <div class="dim caps" style="margin-top:4px">${S.weeks.length} week${S.weeks.length > 1 ? 's' : ''} listed</div></div>`;
   h += `<h2>Full wire</h2>${feedList(40)}`;
   return h;
 }
 function boldTag(B) { return B < 0.9 ? '<span class="tag sandbag">SANDBAG</span>' : B > 1.15 ? '<span class="tag bold">BOLD</span>' : '<span class="tag">SAFE</span>'; }
+function countTo(el, from, to, ms, cls) {
+  const t0 = Date.now();
+  (function frame() {
+    if (!el.isConnected) return;
+    const k = Math.min(1, (Date.now() - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = money(from + (to - from) * e);
+    if (k < 1) setTimeout(frame, 16); else { el.className = 'big ' + cls; buzz(to >= from ? [40, 60, 120] : 200); revealAt = 0; renderTicker(); }
+  })(t0);
+}
 function renderCall() {
   const now = Date.now();
   if (S.pending) {
     const w = last();
     if (!draft) draft = defaultGuidance(w.guidance);
-    const ch = w.close / w.open - 1;
-    let h = `<h2>Week ${w.n} earnings call</h2><div class="card">
-      <div class="dim" style="font-size:13px">Score (EPS) <span class="mono">${w.eps.toFixed(2)}</span> · ${w.raw > 0 ? 'BEAT' : w.raw < 0 ? 'MISS' : 'IN LINE'}</div>
-      <div class="big ${ch >= 0 ? 'up' : 'down'}">${money(w.close)}</div>
-      <div class="mono ${ch >= 0 ? 'up' : 'down'}">${pct(ch)} after hours <span class="dim">from ${money(w.open)}</span></div></div>`;
-    h += `<h2>Segment results</h2><div class="list">${w.results.map(r => `<div class="row"><div class="grow"><b>${esc(r.name)}</b>${r.moonshot ? ' <span class="tag bold">MOON</span>' : ''}
-      <div class="dim mono" style="font-size:12px">guid ${r.target} · street ${r.street} · actual ${r.actual}</div></div>
-      <span class="mono ${r.move > 0 ? 'up' : r.move < 0 ? 'down' : 'dim'}" style="font-size:13px">${pct(r.move)}</span>
-      <span class="stamp ${r.stamp.split(' ')[0]}">${r.stamp}</span></div>`).join('')}</div>`;
-    h += `<h2>Short positions</h2><div class="list">${w.funds.map(f => { const fd = fundById(f.fund); return `<div class="row"><div class="grow"><div class="who" style="color:${fd.color}">${esc(fd.name)} · <span class="mono ${f.pnl > 0 ? 'down' : 'up'}">${f.pnl > 0 ? '+' : '−'}$${Math.abs(f.pnl).toFixed(1)}M</span></div>${esc(f.text)}</div></div>`; }).join('')}</div>`;
-    h += `<h2>Guidance for week ${w.n + 1}</h2><div class="list">${S.segments.filter(s => s.active).map(s => {
+    const anim = callAnim && !reduceMotion(); callAnim = false;
+    const ch = w.close / w.open - 1, cls = ch >= 0 ? 'up' : 'down';
+    const STEP = 0.55, tPrice = w.results.length * STEP + 0.4, tFunds = tPrice + 1.9;
+    if (anim) revealAt = Date.now() + (tPrice + 3) * 1000; // fallback if the count never finishes
+    const verdict = w.raw > 0 ? 'BEAT' : w.raw < 0 ? 'MISS' : 'IN LINE';
+    let h = `<div class="${anim ? 'anim' : ''}"><h2>Week ${w.n} earnings call</h2><div class="card">
+      <div class="dim caps">Score (EPS) ${w.eps.toFixed(2)} · <span class="reveal" style="--d:${tPrice + 1.5}s">${verdict}</span></div>
+      <div class="big ${anim ? 'dim' : cls}" id="closePx">${money(anim ? w.open : w.close)}</div>
+      <div class="${cls} reveal" style="--d:${tPrice + 1.5}s">${pct(ch)} after hours <span class="dim">from ${money(w.open)}</span></div></div>`;
+    h += `<h2>Segment results</h2><div class="list">${w.results.map((r, i) => `<div class="row reveal" style="--d:${i * STEP}s"><div class="grow"><b>${esc(r.name)}</b>${r.moonshot ? ' <span class="tag bold">MOON</span>' : ''}
+      <div class="dim" style="font-size:11px">GUID ${r.target} · STREET ${r.street} · ACTUAL ${r.actual}</div></div>
+      <span class="${r.move > 0 ? 'up' : r.move < 0 ? 'down' : 'dim'}" style="font-size:12px">${pct(r.move)}</span>
+      <span class="stamp ${r.stamp.split(' ')[0]}" style="--d:${i * STEP + 0.25}s">${r.stamp}</span></div>`).join('')}</div>`;
+    h += `<h2>Short positions</h2><div class="list">${w.funds.map((f, j) => { const fd = fundById(f.fund); return `<div class="row reveal" style="--d:${tFunds + j * 0.35}s">${avatar(f.fund, 32)}<div class="grow"><div class="who" style="color:${fd.color}">${esc(fd.name)} · <span class="${f.pnl > 0 ? 'down' : 'up'}">${f.pnl > 0 ? '+' : '−'}$${Math.abs(f.pnl).toFixed(1)}M</span></div>${esc(f.text)}</div></div>`; }).join('')}</div>`;
+    h += `<div class="reveal" style="--d:${tFunds + w.funds.length * 0.35 + 0.3}s"><h2>Guidance for week ${w.n + 1}</h2><div class="list">${S.segments.filter(s => s.active).map(s => {
       const g = draft[s.id], B = boldness(g);
-      return `<div class="row"><div class="grow"><b>${esc(s.name)}</b> ${boldTag(B)}<div class="dim" style="font-size:12px">baseline ${g.baseline.toFixed(1)} ${esc(s.unit)}</div>
+      return `<div class="row"><div class="grow"><b>${esc(s.name)}</b> ${boldTag(B)}<div class="dim" style="font-size:11px">BASELINE ${g.baseline.toFixed(1)} ${esc(s.unit)}</div>
         <label class="moon"><input type="checkbox" ${g.moonshot ? 'checked' : ''} data-a="dmoon" data-id="${s.id}"> Moonshot (2× up, 1.5× down)</label></div>
         <div class="step"><button class="btn" data-a="dstep" data-id="${s.id}" data-d="-1">−</button><span class="val">${g.target}</span><button class="btn" data-a="dstep" data-id="${s.id}" data-d="1">+</button></div></div>`;
     }).join('')}</div>
-    <p class="dim" style="font-size:13px">Bold guidance pays roughly B² on a beat. Sandbagging (below 0.9× baseline) caps the upside at +1%.</p>
-    <button class="btn primary wide" data-a="lock">Lock in guidance</button>`;
+    <p class="dim" style="font-size:12px">Bold guidance pays roughly B² on a beat. Sandbagging (below 0.9× baseline) caps the upside at +1%.</p>
+    <button class="btn primary wide" data-a="lock">Lock in guidance</button></div></div>`;
+    if (anim) after.push(() => {
+      w.results.forEach((r, i) => setTimeout(() => buzz(r.stamp === 'MISS' ? [50, 40, 50] : r.stamp === 'BEAT' ? 30 : 10), (i * STEP + 0.25) * 1000));
+      const el = document.getElementById('closePx');
+      setTimeout(() => countTo(el, w.open, w.close, 1500, cls), tPrice * 1000);
+    });
     return h;
   }
   const w = cur(), open = now >= w.nominalEnd - CALL_OPENS;
   let h = open
-    ? `<h2>Week ${w.n} earnings call</h2><div class="card"><p style="margin:0 0 12px">The call is open. Results settle when you hold it; anything logged until then counts. It auto-reports at ${clock(w.nominalEnd + AUTO_REPORT)}.</p><button class="btn primary wide" data-a="hold">Hold the call</button></div>`
-    : `<h2>Next earnings call</h2><div class="card"><div class="big">${until(w.nominalEnd - CALL_OPENS - now)}</div><div class="dim">opens ${clock(w.nominalEnd - CALL_OPENS)}</div></div>`;
+    ? `<h2>Week ${w.n} earnings call</h2><div class="card"><p style="margin:0 0 12px">The call is open. Results settle when you hold it; anything logged until then counts. It auto-reports ${clock(w.nominalEnd + AUTO_REPORT)}.</p><button class="btn primary wide" data-a="hold">Hold the call</button></div>`
+    : `<h2>Next earnings call</h2><div class="card"><div class="big">${until(w.nominalEnd - CALL_OPENS - now)}</div><div class="dim caps">opens ${clock(w.nominalEnd - CALL_OPENS)}</div></div>`;
   h += `<h2>Week ${w.n} guidance</h2><div class="list">${live(w).map(s => {
     const g = w.guidance[s.id];
-    return `<div class="row"><div class="grow"><b>${esc(s.name)}</b> ${boldTag(bold(w, s))}<div class="dim mono" style="font-size:12px">${progress(w, s, now)} / ${g.target} ${esc(s.unit)} · street ${Math.round(g.target * 0.6)}</div>
+    return `<div class="row"><div class="grow"><b>${esc(s.name)}</b> ${boldTag(bold(w, s))}<div class="dim" style="font-size:11px">${progress(w, s, now)} / ${g.target} ${esc(s.unit)} · STREET ${Math.round(g.target * 0.6)}</div>
       ${w.free ? `<label class="moon"><input type="checkbox" ${g.moonshot ? 'checked' : ''} data-a="moon" data-id="${s.id}"> Moonshot</label>` : g.moonshot ? '<span class="tag bold">MOON</span>' : ''}</div>
       <div class="step"><button class="btn" data-a="step" data-id="${s.id}" data-d="-1">−</button><span class="val">${g.target}</span><button class="btn" data-a="step" data-id="${s.id}" data-d="1">+</button></div></div>`;
   }).join('')}</div>
-  <p class="dim" style="font-size:13px">${w.free ? 'IPO week: change guidance freely.' : 'Cutting guidance costs 3%. Raising it (double down) unlocks Thursday for a segment already at 100%.'}</p>`;
+  <p class="dim" style="font-size:12px">${w.free ? 'IPO week: change guidance freely.' : 'Cutting guidance costs 3%. Raising it (double down) unlocks Thursday for a segment already at 100%.'}</p>`;
   return h;
 }
 function renderSetup() {
   const fundOpts = v => FUNDS.map(f => `<option value="${f.id}" ${f.id === v ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
   const typeOpts = v => [['count', 'Count (tap +1)'], ['daily', 'Once a day'], ['cap', 'Hours under a cap']].map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('');
   const w = cur();
-  let h = `<h2>Segments</h2><p class="dim" style="font-size:13px;margin-top:0">${w && w.free
+  let h = `<h2>Segments</h2><p class="dim" style="font-size:12px;margin-top:0">${w && w.free
     ? 'IPO week: the starting baseline also sets this week\'s target.'
     : 'Baseline changes count from next week. This week\'s targets live on the Call tab.'}</p><div class="list">${S.segments.map(s => `<div class="seg-edit" style="${s.active ? '' : 'opacity:.5'}">
     <label class="full">Name<input data-seg="${s.id}" data-field="name" value="${esc(s.name)}"></label>
@@ -612,7 +691,7 @@ function renderSetup() {
     ${s.type === 'cap' ? `<label>Cap (hours)<input type="number" step="0.5" min="0" data-seg="${s.id}" data-field="cap" value="${s.cap ?? 3}"></label>` : '<span></span>'}
     <div class="full"><button class="btn sm" data-a="retire" data-id="${s.id}">${s.active ? 'Retire' : 'Reinstate'}</button></div></div>`).join('')}</div>
     <p style="margin-top:10px"><button class="btn sm" data-a="addSeg">+ Add segment</button></p>
-    <h2>Backup</h2><p class="dim" style="font-size:13px;margin-top:0">Everything lives in this browser on this device. Last backup: ${S.lastExport ? `${new Date(S.lastExport).toLocaleDateString([], {month: 'short', day: 'numeric'})} (${Math.floor((Date.now() - S.lastExport) / DAY)} days ago)` : 'never'}. The Floor reminds you after two weeks.</p>
+    <h2>Backup</h2><p class="dim" style="font-size:12px;margin-top:0">Everything lives in this browser on this device. Last backup: ${S.lastExport ? `${new Date(S.lastExport).toLocaleDateString([], {month: 'short', day: 'numeric'})} (${Math.floor((Date.now() - S.lastExport) / DAY)} days ago)` : 'never'}. The Floor reminds you after two weeks.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-a="exportData">Export backup</button><button class="btn sm" data-a="importData">Import backup</button><button class="btn sm" style="color:var(--down)" data-a="reset">Reset</button></div>
     <input type="file" id="imp" accept="application/json,.json" hidden>`;
   return h;
@@ -621,9 +700,10 @@ function render() {
   renderTicker();
   const views = {floor: renderFloor, funds: renderFunds, call: renderCall, setup: renderSetup};
   document.getElementById('main').innerHTML = views[tab]() + '<div style="height:20px"></div>';
-  const w = last(), callDot = S.pending || (!S.pending && Date.now() >= w.nominalEnd - CALL_OPENS);
+  const w = last(), callDot = S.pending || Date.now() >= w.nominalEnd - CALL_OPENS;
   document.getElementById('nav').innerHTML = [['floor', 'Floor'], ['funds', 'Funds'], ['call', 'Call'], ['setup', 'Setup']]
-    .map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-a="tab" data-id="${k}">${l}${k === 'call' && callDot ? '<span class="dot"></span>' : ''}</button>`).join('');
+    .map(([k, l], i) => `<button class="${tab === k ? 'on' : ''}" data-a="tab" data-id="${k}"><b>F${i + 1}</b><span>${l.toUpperCase()}${k === 'call' && callDot ? '<span class="dot"></span>' : ''}</span></button>`).join('');
+  after.splice(0).forEach(f => f());
 }
 let toastT;
 function toast(m) { const el = document.getElementById('toast'); el.textContent = m; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
