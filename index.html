@@ -57,7 +57,9 @@ button.stap:active{background:var(--panel2);transform:scale(.985)}
 .blocks{display:block;height:9px;position:relative;background:repeating-linear-gradient(90deg,var(--line) 0 5px,transparent 5px 7px)}
 .blocks i{position:absolute;top:0;bottom:0;left:0;background:repeating-linear-gradient(90deg,var(--c,var(--amber)) 0 5px,transparent 5px 7px);transition:width .4s}
 .sx{display:flex;gap:6px;padding:0 12px 11px}
-.sx input{flex:1;padding:7px}
+.sx .ok,.sx .bad{flex:1;padding:9px 10px}
+.sx .ok{color:var(--up);border-color:#1fe08a55}.sx .ok.on{background:var(--up);color:#000;border-color:var(--up)}
+.sx .bad{color:var(--down);border-color:#ff4a4a55}.sx .bad.on{background:var(--down);color:#000;border-color:var(--down)}
 .kbtn{border:1px solid var(--line);background:#000;padding:6px 10px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border-radius:2px;transition:transform .08s}
 .kbtn:active{transform:scale(.96);background:var(--panel2)}
 .flash{position:absolute;top:34px;right:12px;font-weight:700;font-size:12px;padding:1px 5px;animation:fl 1.4s forwards;pointer-events:none;z-index:2}
@@ -289,7 +291,7 @@ const live = w => S.segments.filter(s => s.active && w.guidance[s.id]);
 function wlogs(w, t = Infinity) { const e = w.end ?? Infinity; return S.logs.filter(l => l.ts >= w.start && l.ts < e && l.ts <= t); }
 function progress(w, s, t) {
   const ls = wlogs(w, t).filter(l => l.seg === s.id && l.kind === 'progress');
-  if (s.type === 'cap') return ls.filter(l => l.value <= (+s.cap || 0)).length;
+  if (s.type === 'cap') return ls.filter(l => l.under ?? l.value <= (+s.cap || 0)).length; // older entries hold typed hours
   return ls.reduce((a, l) => a + l.value, 0);
 }
 function share(w, t) { return clamp((t - w.start) / (w.nominalEnd - w.start), 0, 1); }
@@ -424,12 +426,11 @@ const A = {
     }
     withFlash(id, () => addLog({seg: id, fund: s.fund, kind: 'progress', value: 1}));
   },
-  cap(id) {
+  cap(id, under) {
     const w = cur(); if (!w) return toast('Set next week\'s guidance first.');
-    const s = segById(id), el = document.getElementById('cap-' + id), v = parseFloat(el && el.value);
-    if (!(v >= 0)) return toast('Enter today\'s screen time in hours.');
-    const today = dkey(Date.now());
-    withFlash(id, () => { S.logs = S.logs.filter(l => !(l.seg === id && l.kind === 'progress' && l.date === today)); addLog({seg: id, fund: s.fund, kind: 'progress', value: v}); });
+    const s = segById(id), today = dkey(Date.now());
+    withFlash(id, () => { S.logs = S.logs.filter(l => !(l.seg === id && l.kind === 'progress' && l.date === today)); addLog({seg: id, fund: s.fund, kind: 'progress', value: 1, under: !!under}); });
+    if (!under) buzz([20, 40, 20]);
   },
   milestone(id) {
     const w = cur(); if (!w) return; const s = segById(id);
@@ -569,14 +570,18 @@ function segRow(w, s, now) {
   const fl = flash && flash.id === s.id && now - flash.at < 1500 ? `<span class="flash ${flash.cls}">${flash.text}</span>` : '';
   const sub = [esc(s.unit) + (s.type === 'cap' ? ` · cap ${s.cap}h` : '')];
   if (s.type === 'daily' && todays.length) sub.push('<span class="up">✓ today</span>');
-  if (s.type === 'cap' && todays.length) sub.push(`<span class="${todays[0].value <= s.cap ? 'up' : 'down'}">${todays[0].value}h today</span>`);
+  const capOk = l => l.under ?? l.value <= s.cap;
+  if (s.type === 'cap' && todays.length) sub.push(capOk(todays[0]) ? '<span class="up">✓ under today</span>' : '<span class="down">✗ over today</span>');
   if (g.moonshot) sub.push('<span class="amber">moon</span>');
   if (+s.weight !== 1) sub.push(`×${+s.weight} weight`);
   const done = p >= g.target;
   const arrow = t > 0.02 ? '<span class="up">▲</span>' : t < -0.02 ? '<span class="down">▼</span>' : '<span class="dim">■</span>';
   const main = `<span class="sn">${esc(s.name)}</span><span class="sv">${p}<i>/${g.target}</i></span>${blocks(g.target ? p / g.target : 1, done ? 'var(--up)' : t < -0.1 ? 'var(--down)' : 'var(--amber)')}${arrow}<span class="ss">${sub.join(' · ')}</span>`;
   let extra = '';
-  if (s.type === 'cap') extra = `<div class="sx"><input id="cap-${s.id}" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Hours today" value="${todays.length ? todays[0].value : ''}"><button class="kbtn" data-a="cap" data-id="${s.id}">Log</button></div>`;
+  if (s.type === 'cap') {
+    const pick = todays.length ? capOk(todays[0]) : null;
+    extra = `<div class="sx"><button class="kbtn ok ${pick === true ? 'on' : ''}" data-a="cap" data-id="${s.id}" data-d="1">▲ Under ${s.cap}h</button><button class="kbtn bad ${pick === false ? 'on' : ''}" data-a="cap" data-id="${s.id}" data-d="0">▼ Over ${s.cap}h</button></div>`;
+  }
   else if (s.milestone) extra = `<div class="sx"><button class="kbtn" data-a="milestone" data-id="${s.id}">+ ${esc(s.milestone)}</button></div>`;
   const head = s.type === 'cap' ? `<div class="stap">${main}</div>` : `<button class="stap" data-a="tap" data-id="${s.id}">${main}</button>`;
   return `<div class="srow ${done ? 'done' : ''}">${fl}${head}${extra}</div>`;
@@ -601,7 +606,8 @@ function renderFloor() {
     const label = l.kind === 'disclosure' ? `<span class="down">▼ Disclosure</span> ${esc(DISCLOSURES.find(d => d.id === l.disc)?.label)}`
       : l.kind === 'cut' ? `<span class="down">▼ Guidance cut</span> ${esc(s?.name)}`
       : l.kind === 'milestone' ? `<span class="up">▲ ${esc(s?.milestone)}</span>`
-      : `<span class="up">▲</span> ${esc(s?.name)}${s?.type === 'cap' ? ` · ${l.value}h` : ''}`;
+      : s?.type === 'cap' ? ((l.under ?? l.value <= s.cap) ? `<span class="up">▲</span> ${esc(s.name)} · under cap` : `<span class="down">▼</span> ${esc(s.name)} · over cap`)
+      : `<span class="up">▲</span> ${esc(s?.name)}`;
     return `<div class="row"><span class="dim" style="font-size:11px">${new Date(l.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false})}</span><span class="grow">${label}</span>${l.kind === 'cut' ? '' : `<button class="x" data-a="undo" data-id="${l.id}" aria-label="Remove">×</button>`}</div>`;
   }).join('')}</div>`;
   h += `<h2>Wire</h2>${feedList(8)}`;
