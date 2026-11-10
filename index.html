@@ -42,6 +42,8 @@ header.tick{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1
 .tick-meta{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--dim);margin-top:6px;text-transform:uppercase;letter-spacing:.04em}
 .headline{font-size:12.5px;margin:4px 0 8px;min-height:2.9em;color:#c4d1c9;display:flex;gap:8px;align-items:flex-start}
 .headline b{font-weight:700;letter-spacing:.05em}
+.headline.fresh{animation:fresh 1.6s}
+@keyframes fresh{0%,25%{background:#ffaf1a2e;box-shadow:-12px 0 0 #ffaf1a2e,12px 0 0 #ffaf1a2e}100%{background:transparent;box-shadow:none}}
 
 /* segments */
 .panel{border:1px solid var(--line);background:var(--panel)}
@@ -241,6 +243,30 @@ const LINES = {
     skip: ["Skipped the call. Slept through it? Respect."],
   },
 };
+// reactions to each logged data point: logged = fund is nervous (smug < 50), loggedSmug = fund is unbothered
+const REACTIONS = {
+  sloth: {
+    logged: ["Another {segs}? ...We're monitoring the situation. From the couch.", "Hm. {segs} logged. Probably a fluke. Probably.", "Who authorized all this {segs}? Very tiring to watch.", "Please stop. Watching you is exhausting us."],
+    loggedSmug: ["One {segs}. Cute. Call us when it's a habit.", "Noted. Momentum is temporary; naps are forever.", "{segs} logged. We give it till Wednesday.", "Wow. Effort. Anyway."],
+  },
+  gluttony: {
+    logged: ["A good day? Oh. We'd saved you a slice.", "Vegetables again. Our chef is weeping.", "Fine, fine. One good day. The buffet is patient.", "Another clean day? We've had to cancel the cheese course."],
+    loggedSmug: ["A good day! Lovely. Dessert's still on us tonight.", "Noted, darling. Plenty of week left for seconds.", "One salad doesn't make a diet, friend.", "How virtuous. The fridge light will find you later."],
+  },
+  doom: {
+    logged: ["Under cap?? Volume dropping. Concerning. Very concerning.", "UNDER CAP. This chart makes no sense. Rechecking.", "Another low-screen day. I'm refreshing the data. Again.", "Engagement DOWN. Who approved this?? Not me."],
+    loggedSmug: ["Under cap today, sure. Tomorrow's a new feed.", "One quiet day. The algorithm remembers.", "Cute dip. Scroll's coming back. It always does.", "Bullish on your thumb. Bearish on your willpower."],
+  },
+  ignorant: {
+    logged: ["More {segs}? Our analysts don't know what that means.", "You're learning things. We find that very rude.", "Logged {segs}. We're choosing not to read about it.", "Stop getting smarter. It's hurting our margins."],
+    loggedSmug: ["{segs} logged. One day of knowing stuff. Big deal.", "Flashcards today, forgetting tomorrow. Short holds.", "{segs}, huh? Wake us when it's a streak.", "Knowledge is temporary. Our position isn't."],
+  },
+  bedhead: {
+    logged: ["Showered AND shaved? Pass us the earplugs and the blinds.", "Fresh-faced again. Deeply unsettling. Back under the duvet.", "Ready before noon? Who does that?", "You smell nice. We hate it."],
+    loggedSmug: ["One clean morning. The pillow will win you back.", "Ready today. Tomorrow, snooze button. We know you.", "Cute skincare. Still shorting.", "Enjoy the shower. The duvet is patient."],
+  },
+};
+Object.keys(REACTIONS).forEach(k => Object.assign(LINES[k], REACTIONS[k]));
 const GENERIC = {milestone: ["A milestone. Noted, reluctantly."]};
 
 // ---------- utils ----------
@@ -330,8 +356,16 @@ function say(fid, ev, segs, t = Date.now()) {
   const bank = (LINES[fid] && LINES[fid][ev]) || GENERIC[ev];
   if (!bank) return;
   const names = (segs || []).map(s => s.name).join(' & ') || 'you';
-  S.feed.push({ts: t, fund: fid, text: pick(bank).replace(/\{segs\}/g, names)});
+  const recent = new Set(S.feed.slice(-8).map(e => e.text)), lines = bank.map(x => x.replace(/\{segs\}/g, names));
+  const unused = lines.filter(x => !recent.has(x));
+  S.feed.push({ts: t, fund: fid, text: pick(unused.length ? unused : lines)});
   if (S.feed.length > 80) S.feed = S.feed.slice(-80);
+  hlIdx = 0;
+}
+// the shorting fund answers every data point; bad = the log helps the fund
+function react(s, bad) {
+  const v = fundView(cur(), fundById(s.fund), Date.now());
+  say(s.fund, bad ? 'behind' : v.smug >= 50 ? 'loggedSmug' : 'logged', [s]);
 }
 function evaluate() {
   const w = cur(); if (!w) return;
@@ -407,13 +441,15 @@ function catchUp() {
 
 // ---------- actions ----------
 function addLog(l) { const e = {id: uid(), ts: Date.now(), date: dkey(Date.now()), ...l}; S.logs.push(e); return e; }
-function withFlash(segId, fn) {
-  const w = cur(); const before = priceAt(w, Date.now());
+function withFlash(segId, fn, bad) {
+  const w = cur(); const before = priceAt(w, Date.now()), lines = S.feed.length;
   fn();
   const after = priceAt(w, Date.now() + 1);
   const d = after / before - 1;
   if (segId) { flash = {id: segId, text: pct(d), cls: d >= 0 ? 'up' : 'down', at: Date.now()}; buzz(d >= 0 ? 15 : [20, 40, 20]); }
-  evaluate(); save(); render();
+  evaluate();
+  if (segId && S.feed.length === lines) react(segById(segId), bad || d < 0);
+  save(); render();
 }
 const A = {
   tab(t) { tab = t; draft = null; render(); window.scrollTo(0, 0); },
@@ -429,7 +465,7 @@ const A = {
   cap(id, under) {
     const w = cur(); if (!w) return toast('Set next week\'s guidance first.');
     const s = segById(id), today = dkey(Date.now());
-    withFlash(id, () => { S.logs = S.logs.filter(l => !(l.seg === id && l.kind === 'progress' && l.date === today)); addLog({seg: id, fund: s.fund, kind: 'progress', value: 1, under: !!under}); });
+    withFlash(id, () => { S.logs = S.logs.filter(l => !(l.seg === id && l.kind === 'progress' && l.date === today)); addLog({seg: id, fund: s.fund, kind: 'progress', value: 1, under: !!under}); }, !under);
     if (!under) buzz([20, 40, 20]);
   },
   milestone(id) {
@@ -527,7 +563,7 @@ function weekSeries(w) {
   ts.push(now); ts.sort((a, b) => a - b);
   return ts.map(t => priceAt(w, t));
 }
-let hlIdx = 0, lastPx = null, lastTape = '', callAnim = false, after = [], revealAt = 0;
+let hlIdx = 0, lastPx = null, lastTape = '', callAnim = false, after = [], revealAt = 0, seenFeed = null;
 function renderTicker() {
   const el = document.getElementById('ticker');
   if (!el.firstChild) el.innerHTML = `<div class="tick-row"><span class="sym">$CAL</span><span class="px" id="px"></span><span class="chg" id="chg"></span><span id="spk"></span></div>
@@ -560,6 +596,9 @@ function renderTicker() {
   else meta = `<span>Week ${w.n}</span><span>call in ${until(w.nominalEnd - CALL_OPENS - now)}</span>`;
   document.getElementById('meta').innerHTML = meta;
   const recent = S.feed.slice(-5).reverse(), h = recent[hlIdx % recent.length];
+  const newest = S.feed.length + '|' + (recent[0] && recent[0].ts), hl = document.getElementById('hl');
+  if (seenFeed && newest !== seenFeed && !hush && !reduceMotion()) { hl.classList.remove('fresh'); void hl.offsetWidth; hl.classList.add('fresh'); }
+  seenFeed = newest;
   document.getElementById('hl').innerHTML = hush ? `<span><b class="amber">$CAL</b> Week ${w.n} earnings call. Results coming in…</span>` : !h ? '' : h.fund
     ? `${avatar(h.fund, 20)}<span><b style="color:${fundById(h.fund).color}">${CODES[h.fund]}</b> ${esc(h.text)}</span>`
     : `<span><b class="amber">$CAL</b> ${esc(h.text)}</span>`;
