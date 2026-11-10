@@ -267,6 +267,14 @@ const REACTIONS = {
   },
 };
 Object.keys(REACTIONS).forEach(k => Object.assign(LINES[k], REACTIONS[k]));
+const SQUEEZE_LINES = {
+  sloth: ["SQUEEZE: Sloth Capital forced to cover after {n}-day {segs} streak. 'We were told this would be easy.'", "Sloth Capital scrambles off the couch as {segs} runs {n} days straight. Covering."],
+  gluttony: ["SQUEEZE: Gluttony Partners covers {segs} short. Dessert cart seen fleeing the building.", "{n} good days running. Gluttony Partners loosens its belt and panics."],
+  doom: ["SHORT SQUEEZE!!! {segs} up {n} days straight. I'm literally shaking. Covering.", "{n}-DAY STREAK. Doomscroll Holdings margin-called. Deleting app (not really)."],
+  ignorant: ["SQUEEZE: Ignorant Inc. covers after {n}-day {segs} streak. 'We didn't see it coming. We don't see much.'", "{n} days of {segs}. Ignorant Inc. forced to buy back. Has to read the contract."],
+  bedhead: ["SQUEEZE: Bedhead Holdings jolted awake by {n}-day {segs} streak. Covering in pajamas.", "{n} mornings in a row?! Bedhead Holdings spills coffee, covers short."],
+};
+Object.keys(SQUEEZE_LINES).forEach(k => LINES[k].squeeze = SQUEEZE_LINES[k]);
 const GENERIC = {milestone: ["A milestone. Noted, reluctantly."]};
 
 // ---------- utils ----------
@@ -326,11 +334,35 @@ function term(w, s, t) { const g = w.guidance[s.id].target; if (g <= 0) return 0
 const boldness = g => clamp(g.target / Math.max(g.baseline, 0.5), 0.25, 3);
 function bold(w, s) { return boldness(w.guidance[s.id]); }
 function wavg(segs, f) { let sw = 0, sv = 0; segs.forEach(s => { const k = +s.weight || 0; sw += k; sv += k * f(s); }); return sw ? sv / sw : 0; }
+// a run of good days in a habit squeezes its fund's short on day 3, 5, 7...; sandbagged guidance can't squeeze.
+// Derived from logs (never stored), so undoing a tap undoes its squeeze.
+const SQUEEZE_AT = n => n >= 3 && n % 2 === 1;
+function goodDays(s, t) {
+  const days = new Map(); // date -> first good log ts that day
+  S.logs.forEach(l => {
+    if (l.seg !== s.id || l.kind !== 'progress' || l.ts > t) return;
+    if (s.type === 'cap' && !(l.under ?? l.value <= (+s.cap || 0))) return;
+    if (!days.has(l.date) || l.ts < days.get(l.date)) days.set(l.date, l.ts);
+  });
+  return days;
+}
+function prevDay(k) { const d = new Date(k + 'T12:00'); d.setDate(d.getDate() - 1); return dkey(d.getTime()); }
+function streak(days, k) { let n = 0; while (days.has(k)) { n++; k = prevDay(k); } return n; }
+function squeezes(w, t = Infinity) {
+  const out = [];
+  live(w).forEach(s => {
+    if (bold(w, s) < 0.9) return;
+    const days = goodDays(s, Math.min(t, w.end ?? Infinity));
+    days.forEach((ts, k) => { if (ts >= w.start && ts < (w.end ?? Infinity) && ts <= t) { const n = streak(days, k); if (SQUEEZE_AT(n)) out.push({seg: s.id, fund: s.fund, ts, n}); } });
+  });
+  return out;
+}
 function counts(w, t, fund) {
   const ls = wlogs(w, t).filter(l => !fund || l.fund === fund);
-  return {disc: ls.filter(l => l.kind === 'disclosure').length, cuts: ls.filter(l => l.kind === 'cut').length, ms: ls.filter(l => l.kind === 'milestone').length};
+  return {disc: ls.filter(l => l.kind === 'disclosure').length, cuts: ls.filter(l => l.kind === 'cut').length, ms: ls.filter(l => l.kind === 'milestone').length,
+    sq: squeezes(w, t).filter(x => !fund || x.fund === fund).length};
 }
-function adj(c) { return Math.pow(0.995, c.disc) * Math.pow(0.97, c.cuts) * Math.pow(1.02, c.ms); }
+function adj(c) { return Math.pow(0.995, c.disc) * Math.pow(0.97, c.cuts) * Math.pow(1.02, c.ms) * Math.pow(1.015, c.sq); }
 function priceAt(w, t) {
   if (w.end && t >= w.end) return w.close;
   return w.open * (1 + 0.10 * wavg(live(w), s => term(w, s, t))) * adj(counts(w, t));
@@ -338,12 +370,12 @@ function priceAt(w, t) {
 function fundView(w, f, t) {
   const segs = live(w).filter(s => s.fund === f.id);
   const avgTerm = mean(segs.map(s => term(w, s, t)));
-  const disc = counts(w, t, f.id).disc;
-  const smug = clamp(Math.round(50 - 100 * avgTerm + 10 * disc), 0, 100);
+  const {disc, sq} = counts(w, t, f.id);
+  const smug = clamp(Math.round(50 - 100 * avgTerm + 10 * disc - 15 * sq), 0, 100);
   let pos = segs.length ? 5 * mean(segs.map(s => bold(w, s))) : 1;
   if (w.midweek[f.id]) pos *= 1.5;
-  pos += disc * 0.5;
-  return {segs, avgTerm, smug, pos, disc};
+  pos = (pos + disc * 0.5) * Math.pow(0.8, sq); // each squeeze forces a partial cover
+  return {segs, avgTerm, smug, pos, disc, sq};
 }
 function baseline(s) {
   const hist = S.weeks.filter(w => w.results && w.results.some(r => r.seg === s.id)).slice(-4);
@@ -352,11 +384,11 @@ function baseline(s) {
 }
 
 // ---------- feed ----------
-function say(fid, ev, segs, t = Date.now()) {
+function say(fid, ev, segs, t = Date.now(), n = '') {
   const bank = (LINES[fid] && LINES[fid][ev]) || GENERIC[ev];
   if (!bank) return;
   const names = (segs || []).map(s => s.name).join(' & ') || 'you';
-  const recent = new Set(S.feed.slice(-8).map(e => e.text)), lines = bank.map(x => x.replace(/\{segs\}/g, names));
+  const recent = new Set(S.feed.slice(-8).map(e => e.text)), lines = bank.map(x => x.replace(/\{segs\}/g, names).replace(/\{n\}/g, n));
   const unused = lines.filter(x => !recent.has(x));
   S.feed.push({ts: t, fund: fid, text: pick(unused.length ? unused : lines)});
   if (S.feed.length > 80) S.feed = S.feed.slice(-80);
@@ -396,7 +428,7 @@ function settle(w, t, held) {
   w.funds = FUNDS.map(f => {
     const rs = w.results.filter(r => r.fund === f.id); if (!rs.length) return null;
     const v = fundView(w, f, t), avgMove = mean(rs.map(r => r.move));
-    const pnl = v.pos * -avgMove * 10 + v.disc * 0.5;
+    const pnl = v.pos * -avgMove * 10 + v.disc * 0.5 - v.sq * 1.5;
     const won = pnl > 0.05;
     const segs = rs.map(r => ({name: r.name}));
     const bank = LINES[f.id][held ? (won ? 'gloat' : 'retract') : 'skip'];
@@ -443,10 +475,14 @@ function catchUp() {
 function addLog(l) { const e = {id: uid(), ts: Date.now(), date: dkey(Date.now()), ...l}; S.logs.push(e); return e; }
 function withFlash(segId, fn, bad) {
   const w = cur(); const before = priceAt(w, Date.now()), lines = S.feed.length;
+  const key = x => x.seg + x.ts, had = new Set(squeezes(w).map(key));
   fn();
   const after = priceAt(w, Date.now() + 1);
   const d = after / before - 1;
   if (segId) { flash = {id: segId, text: pct(d), cls: d >= 0 ? 'up' : 'down', at: Date.now()}; buzz(d >= 0 ? 15 : [20, 40, 20]); }
+  const fresh = squeezes(w).filter(x => !had.has(key(x)));
+  fresh.forEach(x => say(x.fund, 'squeeze', [segById(x.seg)], Date.now(), x.n));
+  if (fresh.length) { buzz([60, 40, 60, 40, 220]); setTimeout(() => toast('Short squeeze! +1.5%'), 50); }
   evaluate();
   if (segId && S.feed.length === lines) react(segById(segId), bad || d < 0);
   save(); render();
@@ -613,6 +649,9 @@ function segRow(w, s, now) {
   if (s.type === 'cap' && todays.length) sub.push(capOk(todays[0]) ? '<span class="up">✓ under today</span>' : '<span class="down">✗ over today</span>');
   if (g.moonshot) sub.push('<span class="amber">moon</span>');
   if (+s.weight !== 1) sub.push(`×${+s.weight} weight`);
+  const days = goodDays(s, now), inToday = days.has(today), run = streak(days, inToday ? today : prevDay(today));
+  if (run >= 2) sub.push(`<span class="amber">streak ${run}</span>`);
+  if (run >= 2 && SQUEEZE_AT(run + 1) && bold(w, s) >= 0.9) sub.push(`<span class="amber">${inToday ? 'squeeze tomorrow' : 'log today to squeeze'}</span>`);
   const done = p >= g.target;
   const arrow = t > 0.02 ? '<span class="up">▲</span>' : t < -0.02 ? '<span class="down">▼</span>' : '<span class="dim">■</span>';
   const main = `<span class="sn">${esc(s.name)}</span><span class="sv">${p}<i>/${g.target}</i></span>${blocks(g.target ? p / g.target : 1, done ? 'var(--up)' : t < -0.1 ? 'var(--down)' : 'var(--amber)')}${arrow}<span class="ss">${sub.join(' · ')}</span>`;
@@ -676,10 +715,28 @@ function renderFunds() {
   if (!S.pending) closes.push(priceAt(w, now));
   const allTime = Math.max(...closes);
   h += `<h2>$CAL since IPO</h2><div class="card"><div style="display:flex;justify-content:space-between"><b>${money(closes[closes.length - 1])}</b><span class="dim caps">ATH ${money(allTime)}</span></div>
-    <div style="margin-top:8px">${spark(closes, 300, 70, '#ffaf1a').replace('width="300"', 'width="100%"')}</div>
-    <div class="dim caps" style="margin-top:4px">${S.weeks.length} week${S.weeks.length > 1 ? 's' : ''} listed</div></div>`;
+    <div style="margin-top:8px">${candleChart(allTime)}</div>
+    <div class="dim caps" style="margin-top:4px;display:flex;justify-content:space-between;gap:8px"><span>${S.weeks.length} week${S.weeks.length > 1 ? 's' : ''} listed</span>
+      <span><span class="up">▮</span><span class="down">▮</span> week · <span class="amber">━</span> 4-wk avg · ┄ ATH</span></div></div>`;
   h += `<h2>Full wire</h2>${feedList(40)}`;
   return h;
+}
+// one candle per week (last 26), 4-week moving average of closes, dashed all-time high; the live week is faded
+function candleChart(ath) {
+  const data = S.weeks.slice(-26).map(w => { const s = weekSeries(w); return {o: w.open, c: s[s.length - 1], h: Math.max(w.open, ...s), l: Math.min(w.open, ...s), live: !w.end}; });
+  const ma = data.map((d, i) => mean(data.slice(Math.max(0, i - 3), i + 1).map(x => x.c)));
+  const W = 300, H = 120, P = 8;
+  const lo = Math.min(...data.map(d => d.l)) * 0.995, hi = Math.max(ath, ...data.map(d => d.h)) * 1.005, r = hi - lo || 1;
+  const y = v => P + (hi - v) / r * (H - 2 * P), slot = W / Math.max(data.length, 8), bw = Math.max(3, slot * 0.55);
+  let g = `<line x1="0" x2="${W}" y1="${y(ath).toFixed(1)}" y2="${y(ath).toFixed(1)}" stroke="#6c8076" stroke-width=".8" stroke-dasharray="3 3"/>
+    <text x="${W - 2}" y="${(y(ath) - 3).toFixed(1)}" fill="#6c8076" font-size="8" text-anchor="end">ATH</text>`;
+  data.forEach((d, i) => {
+    const x = slot * (i + 0.5), col = d.c >= d.o ? '#1fe08a' : '#ff4a4a', top = Math.min(y(d.o), y(d.c));
+    g += `<g opacity="${d.live ? 0.5 : 1}"><line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(d.h).toFixed(1)}" y2="${y(d.l).toFixed(1)}" stroke="${col}" stroke-width="1.2"/>
+      <rect x="${(x - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5, Math.abs(y(d.o) - y(d.c))).toFixed(1)}" fill="${col}"/></g>`;
+  });
+  if (ma.length > 1) g += `<polyline points="${ma.map((v, i) => `${(slot * (i + 0.5)).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="#ffaf1a" stroke-width="1.4" stroke-linejoin="round"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="inherit" role="img" aria-label="Weekly $CAL candles">${g}</svg>`;
 }
 function boldTag(B) { return B < 0.9 ? '<span class="tag sandbag">SANDBAG</span>' : B > 1.15 ? '<span class="tag bold">BOLD</span>' : '<span class="tag">SAFE</span>'; }
 function countTo(el, from, to, ms, cls) {

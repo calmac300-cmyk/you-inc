@@ -20,4 +20,8 @@ Deviations from the spec:
 - Baselines are normalized by week length, so a short IPO week doesn't drag them down.
 - Positions and smugness are derived from logs rather than stored.
 
-Not built yet: the staged call reveal, trophy wall, weekly candles, short squeezes, desktop ticker tape, ticker.json/KWGT, and the native layer (phases 2 to 4).
+Built since [2026-11-09]: short squeezes, which are derived from logs and never stored. A good-day streak in a habit squeezes on day 3, 5, 7..., giving +1.5%, smugness −15, position ×0.8 and fund P&L −1.5. Sandbagged guidance (B < 0.9) can't squeeze. Also weekly candles on the Funds tab, and every logged data point now gets a fund reaction (`REACTIONS`).
+
+Deliberately skipped, since the user felt they'd crowd the app [2026-11-09]: the trophy wall and a morning pre-market note.
+
+Not built yet: the desktop ticker tape, ticker.json/KWGT, and the native layer.
