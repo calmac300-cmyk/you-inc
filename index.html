@@ -170,7 +170,7 @@ const FUNDS = [
 // type: count = +1 per tap, daily = once per day, cap = nightly hours, a day counts if under cap
 const DEFAULT_SEGMENTS = [
   {id:'training', name:'Training', unit:'workouts', type:'count', fund:'sloth', weight:1, base:3, active:true},
-  {id:'mobility', name:'Mobility', unit:'walk days', type:'daily', fund:'sloth', weight:1, base:4, active:true},
+  {id:'mobility', name:'Mobility', unit:'move days', type:'daily', fund:'sloth', weight:1, base:4, active:true},
   {id:'screen', name:'Screen time', unit:'days under cap', type:'cap', cap:3, fund:'doom', weight:1, base:4, active:true},
   {id:'nutrition', name:'Nutrition', unit:'good days', type:'daily', fund:'gluttony', weight:1, base:4, active:true, board:false},
   {id:'language', name:'Language', unit:'study days', type:'daily', fund:'ignorant', weight:1, base:3, active:true},
@@ -1004,6 +1004,13 @@ document.addEventListener('change', e => {
 function migrate() {
   if (S.proxies == null) S.proxies = 0;
   if (S.block === undefined) S.block = null;
+  // one-time renames of shipped defaults; listed in S.migrated so a later edit in Setup isn't undone
+  S.migrated = S.migrated || [];
+  if (!S.migrated.includes('move-days')) {
+    const m = S.segments.find(s => s.id === 'mobility');
+    if (m && m.unit === 'walk days') m.unit = 'move days';
+    S.migrated.push('move-days');
+  }
   // habits a single block of time can't move stay off the board's ballot
   S.segments.forEach(s => { const d = DEFAULT_SEGMENTS.find(x => x.id === s.id); if (d && d.board === false && s.board === undefined) s.board = false; });
   DEFAULT_SEGMENTS.forEach(d => {
