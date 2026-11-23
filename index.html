@@ -172,10 +172,10 @@ const DEFAULT_SEGMENTS = [
   {id:'training', name:'Training', unit:'workouts', type:'count', fund:'sloth', weight:1, base:3, active:true},
   {id:'mobility', name:'Mobility', unit:'walk days', type:'daily', fund:'sloth', weight:1, base:4, active:true},
   {id:'screen', name:'Screen time', unit:'days under cap', type:'cap', cap:3, fund:'doom', weight:1, base:4, active:true},
-  {id:'nutrition', name:'Nutrition', unit:'good days', type:'daily', fund:'gluttony', weight:1, base:4, active:true},
+  {id:'nutrition', name:'Nutrition', unit:'good days', type:'daily', fund:'gluttony', weight:1, base:4, active:true, board:false},
   {id:'language', name:'Language', unit:'study days', type:'daily', fund:'ignorant', weight:1, base:3, active:true},
   {id:'reading', name:'Reading', unit:'reading days', type:'daily', fund:'ignorant', weight:1, base:4, active:true, milestone:'Finished a book'},
-  {id:'ready', name:'Getting ready', unit:'ready days', type:'daily', fund:'bedhead', weight:1, base:5, active:true},
+  {id:'ready', name:'Getting ready', unit:'ready days', type:'daily', fund:'bedhead', weight:1, base:5, active:true, board:false},
 ];
 
 const DISCLOSURES = [
@@ -441,7 +441,7 @@ function boardSay(mid, ev, s, mins) {
 // Screen-time style caps can't take a block, and a once-a-day habit already done today is off the table.
 function boardVotes(w, now) {
   const today = dkey(now);
-  const cands = live(w).filter(s => s.type !== 'cap' && !(s.type === 'daily' && wlogs(w).some(l => l.seg === s.id && l.kind === 'progress' && l.date === today)));
+  const cands = live(w).filter(s => s.type !== 'cap' && s.board !== false && !(s.type === 'daily' && wlogs(w).some(l => l.seg === s.id && l.kind === 'progress' && l.date === today)));
   if (!cands.length) return null;
   const best = (f, tie = () => 0) => cands.slice().sort((a, b) => (f(a) - f(b)) || (tie(a) - tie(b)))[0];
   const lastLog = s => Math.max(0, ...S.logs.filter(l => l.seg === s.id && l.kind === 'progress').map(l => l.ts));
@@ -1004,6 +1004,8 @@ document.addEventListener('change', e => {
 function migrate() {
   if (S.proxies == null) S.proxies = 0;
   if (S.block === undefined) S.block = null;
+  // habits a single block of time can't move stay off the board's ballot
+  S.segments.forEach(s => { const d = DEFAULT_SEGMENTS.find(x => x.id === s.id); if (d && d.board === false && s.board === undefined) s.board = false; });
   DEFAULT_SEGMENTS.forEach(d => {
     if (S.segments.some(s => s.id === d.id)) return;
     S.segments.push({...d});

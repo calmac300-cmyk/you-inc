@@ -26,7 +26,7 @@ Deliberately skipped, since the user felt they'd crowd the app [2026-11-09]: the
 
 The board [2026-11-23] is for free time. It's a single "Convene the board" button on the Floor, deliberately not a separate screen.
 - **Picking the block:** you choose 15, 30 or 60 minutes. Three shareholders vote on a habit. Prudence backs the one furthest behind pace. Rex backs one near a squeeze, otherwise the boldest. Nana backs the most neglected one. On a tie, Rex and Nana vote away from Prudence's pick. The majority wins; otherwise Prudence chairs.
-- **What can't be picked:** cap habits, and once-a-day habits already done today.
+- **What can't be picked:** cap habits, habits marked `board: false` (Nutrition and Getting ready, since one block of time can't move them), and once-a-day habits already done today.
 - **Running the block:** the countdown is clock-based, so it survives reloads. Done unlocks when time is up. It logs the habit's day (or +1 for count habits), pays a bonus (`board` log: +0.5%, +1% or +2%) and earns 1 proxy.
 - **Countermanding** picks another habit instead. It spends a proxy, or costs 2% if you have none (`countermand` log), and earns no proxy. Abandon costs nothing but a board line.
 - State lives in `S.proxies` and `S.block`. Board posts are feed entries with a `board` member id.
