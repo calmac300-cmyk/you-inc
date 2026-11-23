@@ -93,6 +93,18 @@ button.stap:active{background:var(--panel2);transform:scale(.985)}
 .tag.sandbag{color:var(--down);border-color:#ff4a4a66}
 .card{background:var(--panel);border:1px solid var(--line);padding:12px}
 .caps{font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.link{color:var(--dim);font-size:11px;text-decoration:underline;text-transform:uppercase;letter-spacing:.04em}
+
+/* board */
+.board-btn{margin-top:14px;background:#000;border-color:#ffd16666;color:#ffd166}
+.board{border-color:#ffd16655}
+.bm-seg{font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#ffd166;margin-top:4px}
+.bm-acts{display:flex;gap:8px}.bm-acts .btn{flex:1}
+.vote{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:12.5px}
+.vote:first-child{border-top:0;padding-top:0}
+.vote b{white-space:nowrap;color:var(--text)}
+.vsq{width:8px;height:8px;margin-top:5px;flex:none}
+.bm-result{border-top:1px solid #ffd16655;padding-top:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#ffd166}
 
 /* funds */
 .fund{border:1px solid var(--line);background:var(--panel);padding:12px;margin-bottom:8px}
@@ -277,6 +289,26 @@ const SQUEEZE_LINES = {
 Object.keys(SQUEEZE_LINES).forEach(k => LINES[k].squeeze = SQUEEZE_LINES[k]);
 const GENERIC = {milestone: ["A milestone. Noted, reluctantly."]};
 
+// the board: shareholders who vote on what a free block of time goes to
+const BOARD = [
+  {id: 'prudence', name: 'Prudence', role: 'Pension fund', color: '#e8e2c8'},
+  {id: 'rex', name: 'Rex', role: 'Activist investor', color: '#ffd166'},
+  {id: 'nana', name: 'Nana', role: 'Founding shareholder', color: '#f4a6c1'},
+];
+const BLOCK_BONUS = {15: 0.005, 30: 0.01, 60: 0.02};
+const BOARD_LINES = {
+  behind: ["{seg} is furthest behind pace. Fundamentals first.", "The numbers say {seg}. Close the gap."],
+  squeeze: ["{seg} is one day from a squeeze. Finish them.", "Squeeze the shorts. {seg}, now."],
+  bold: ["{seg}. Big guidance, big upside. Push it.", "{seg}. Make the shorts sweat."],
+  stale: ["You haven't done {seg} in a while, dear.", "When did you last do {seg}? Nana remembers."],
+  mandate: ["Mandate issued: {seg}, {mins} minutes. The board is watching.", "Resolution passed: {mins} minutes of {seg}."],
+  done: ["Board pleased. {seg} delivered on schedule.", "{mins} minutes well spent. The board approves this allocation.", "Nana says she's proud of you. Rex says do it again."],
+  countermand: ["Countermand noted. Prudence is drafting a memo.", "Rex is furious. Nana says it's fine, dear. It isn't."],
+  abandon: ["Block abandoned. The board will remember this at the next meeting.", "Walked out of your own mandate. Minutes recorded."],
+  idle: ["The board finds nothing urgent. Take the time off; you've earned it."],
+};
+const memberById = id => BOARD.find(m => m.id === id);
+
 // ---------- utils ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -293,7 +325,7 @@ function clock(t) { return new Date(t).toLocaleString([], {weekday:'short', hour
 
 // ---------- state ----------
 let S = load();
-let tab = 'floor', flash = null, draft = null;
+let tab = 'floor', flash = null, draft = null, boardUI = null;
 
 function load() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) return s; } catch (e) {}
@@ -311,7 +343,7 @@ function fresh() {
   return {
     v: 1, segments, logs: [], feed: [{ts: now, fund: null, text: 'IPO day. $CAL lists at $100.00. Tune your first guidance on the Call tab.'}],
     weeks: [{n: 1, start: now, end: null, nominalEnd, open: 100, guidance, midweek: {}, status: {}, free: true}],
-    pending: false, booksClosed: null,
+    pending: false, booksClosed: null, proxies: 0, block: null,
   };
 }
 
@@ -360,9 +392,11 @@ function squeezes(w, t = Infinity) {
 function counts(w, t, fund) {
   const ls = wlogs(w, t).filter(l => !fund || l.fund === fund);
   return {disc: ls.filter(l => l.kind === 'disclosure').length, cuts: ls.filter(l => l.kind === 'cut').length, ms: ls.filter(l => l.kind === 'milestone').length,
-    sq: squeezes(w, t).filter(x => !fund || x.fund === fund).length};
+    sq: squeezes(w, t).filter(x => !fund || x.fund === fund).length,
+    // board blocks pay their bonus; a countermand with no proxy left costs its value
+    board: ls.reduce((m, l) => l.kind === 'board' ? m * (1 + l.value) : l.kind === 'countermand' ? m * (1 - l.value) : m, 1)};
 }
-function adj(c) { return Math.pow(0.995, c.disc) * Math.pow(0.97, c.cuts) * Math.pow(1.02, c.ms) * Math.pow(1.015, c.sq); }
+function adj(c) { return Math.pow(0.995, c.disc) * Math.pow(0.97, c.cuts) * Math.pow(1.02, c.ms) * Math.pow(1.015, c.sq) * c.board; }
 function priceAt(w, t) {
   if (w.end && t >= w.end) return w.close;
   return w.open * (1 + 0.10 * wavg(live(w), s => term(w, s, t))) * adj(counts(w, t));
@@ -393,6 +427,37 @@ function say(fid, ev, segs, t = Date.now(), n = '') {
   S.feed.push({ts: t, fund: fid, text: pick(unused.length ? unused : lines)});
   if (S.feed.length > 80) S.feed = S.feed.slice(-80);
   hlIdx = 0;
+}
+function boardSay(mid, ev, s, mins) {
+  const recent = new Set(S.feed.slice(-8).map(e => e.text));
+  const lines = BOARD_LINES[ev].map(x => x.replace(/\{seg\}/g, s ? s.name : '').replace(/\{mins\}/g, mins || ''));
+  const unused = lines.filter(x => !recent.has(x));
+  S.feed.push({ts: Date.now(), fund: null, board: mid, text: pick(unused.length ? unused : lines)});
+  if (S.feed.length > 80) S.feed = S.feed.slice(-80);
+  hlIdx = 0;
+}
+// Prudence backs the habit furthest behind pace, Rex the one nearest a squeeze (else the boldest),
+// Nana the one you've neglected longest. Two matching votes win; otherwise Prudence chairs.
+// Screen-time style caps can't take a block, and a once-a-day habit already done today is off the table.
+function boardVotes(w, now) {
+  const today = dkey(now);
+  const cands = live(w).filter(s => s.type !== 'cap' && !(s.type === 'daily' && wlogs(w).some(l => l.seg === s.id && l.kind === 'progress' && l.date === today)));
+  if (!cands.length) return null;
+  const best = (f, tie = () => 0) => cands.slice().sort((a, b) => (f(a) - f(b)) || (tie(a) - tie(b)))[0];
+  const lastLog = s => Math.max(0, ...S.logs.filter(l => l.seg === s.id && l.kind === 'progress').map(l => l.ts));
+  const nearSqueeze = s => { const run = streak(goodDays(s, now), prevDay(today)); return run >= 2 && SQUEEZE_AT(run + 1) && bold(w, s) >= 0.9; };
+  const sq = cands.find(nearSqueeze);
+  const pru = best(s => term(w, s, now), s => -(+s.weight || 0));
+  const notPru = s => s.id === pru.id ? 1 : 0; // on a tie, the others back something else so the board actually debates
+  const votes = [
+    {m: 'prudence', seg: pru, why: 'behind'},
+    {m: 'rex', seg: sq || best(s => term(w, s, now) - bold(w, s) * (w.guidance[s.id].moonshot ? 2 : 1), notPru), why: sq ? 'squeeze' : 'bold'},
+    {m: 'nana', seg: best(lastLog, notPru), why: 'stale'},
+  ];
+  const tally = {}; votes.forEach(v => tally[v.seg.id] = (tally[v.seg.id] || 0) + 1);
+  const top = Object.keys(tally).find(id => tally[id] >= 2);
+  const winner = top ? segById(top) : pru;
+  return {votes, winner, split: Object.values(tally).sort((a, b) => b - a).join('–'), cands};
 }
 // the shorting fund answers every data point; bad = the log helps the fund
 function react(s, bad) {
@@ -538,6 +603,41 @@ const A = {
   dstep(id, d) { draft[id].target = Math.max(0, draft[id].target + d); render(); },
   dmoon(id) { draft[id].moonshot = !draft[id].moonshot; render(); },
   lock() { const w = last(); openWeek(w, draft, Date.now()); draft = null; save(); tab = 'floor'; render(); window.scrollTo(0, 0); },
+  convene() { if (!cur()) return toast('Set next week\'s guidance first.'); boardUI = {step: 'pick'}; render(); },
+  boardCancel() { boardUI = null; render(); },
+  boardMins(_, mins) {
+    const v = boardVotes(cur(), Date.now());
+    if (!v) { boardSay('nana', 'idle'); boardUI = null; save(); render(); return; }
+    boardUI = {step: 'vote', mins, ...v}; render();
+  },
+  accept() { startBlock(boardUI.winner, boardUI.mins, false); },
+  overrule() { boardUI.step = 'countermand'; render(); },
+  countermand(id) {
+    const s = segById(id), useProxy = (S.proxies || 0) > 0;
+    withFlash(null, () => { if (useProxy) S.proxies--; addLog({kind: 'countermand', seg: id, fund: s.fund, value: useProxy ? 0 : 0.02}); });
+    boardSay(pick(['prudence', 'rex']), 'countermand', s);
+    startBlock(s, boardUI.mins, true);
+  },
+  done() {
+    const b = S.block, w = cur();
+    if (!b) return;
+    if (!w) return toast('Set next week\'s guidance first.');
+    if (Date.now() < b.end) return toast('Not yet. The board is watching.');
+    const s = segById(b.seg), today = dkey(Date.now());
+    withFlash(b.seg, () => {
+      const doneToday = wlogs(w).some(l => l.seg === s.id && l.kind === 'progress' && l.date === today);
+      if (s.type === 'count' || !doneToday) addLog({seg: s.id, fund: s.fund, kind: 'progress', value: 1});
+      addLog({kind: 'board', seg: s.id, fund: s.fund, value: BLOCK_BONUS[b.mins]});
+    });
+    if (!b.countermand) S.proxies = (S.proxies || 0) + 1;
+    boardSay(pick(BOARD).id, 'done', s, b.mins);
+    S.block = null; save(); render();
+    toast(`Block complete: +${(BLOCK_BONUS[b.mins] * 100).toFixed(1)}%${b.countermand ? '' : ' · +1 proxy'}`);
+  },
+  abandon() {
+    if (!S.block || !confirm('Abandon this block? No credit, and the board will remember.')) return;
+    boardSay('prudence', 'abandon'); S.block = null; save(); render();
+  },
   addSeg() {
     const s = {id: 's' + uid(), name: 'New segment', unit: 'days', type: 'daily', fund: 'sloth', weight: 1, base: 3, active: true};
     S.segments.push(s);
@@ -558,6 +658,12 @@ const A = {
   importData() { document.getElementById('imp').click(); },
   reset() { if (!confirm('Delist $CAL and start over? This erases everything.')) return; S = fresh(); save(); tab = 'floor'; render(); },
 };
+function startBlock(s, mins, countermand) {
+  const now = Date.now();
+  S.block = {seg: s.id, mins, start: now, end: now + mins * 60e3, countermand};
+  if (!countermand) boardSay('prudence', 'mandate', s, mins);
+  boardUI = null; save(); render(); window.scrollTo(0, 0);
+}
 function editSeg(el) {
   const s = segById(el.dataset.seg), f = el.dataset.field;
   let v = el.value;
@@ -637,6 +743,7 @@ function renderTicker() {
   seenFeed = newest;
   document.getElementById('hl').innerHTML = hush ? `<span><b class="amber">$CAL</b> Week ${w.n} earnings call. Results coming in…</span>` : !h ? '' : h.fund
     ? `${avatar(h.fund, 20)}<span><b style="color:${fundById(h.fund).color}">${CODES[h.fund]}</b> ${esc(h.text)}</span>`
+    : h.board ? `<span><b style="color:${memberById(h.board).color}">BOARD</b> ${esc(h.text)}</span>`
     : `<span><b class="amber">$CAL</b> ${esc(h.text)}</span>`;
 }
 function segRow(w, s, now) {
@@ -676,6 +783,7 @@ function renderFloor() {
   const sinceBackup = now - (S.lastExport || S.weeks[0].start);
   if (sinceBackup >= BACKUP_NUDGE) h += `<div class="banner"><span><b>Back up your books.</b> ${S.lastExport ? `Last export ${Math.floor(sinceBackup / DAY)} days ago.` : 'No backup yet.'}</span><button class="btn sm" data-a="exportData">Export</button></div>`;
   if (now >= w.nominalEnd - CALL_OPENS) h += `<div class="banner"><span><b>Earnings call is open.</b> Hold it before Monday 9am.</span><button class="btn sm primary" data-a="tab" data-id="call">Go</button></div>`;
+  h += renderBoard(w, now);
   h += `<h2>Segments</h2><div class="panel">${segs.map(s => segRow(w, s, now)).join('')}</div>`;
   h += `<h2>File a disclosure</h2><div class="discs">${DISCLOSURES.map(d => `<button class="disc" data-a="disclose" data-id="${d.id}">${esc(d.label)}</button>`).join('')}</div>`;
   const todays = S.logs.filter(l => l.date === today && l.ts >= w.start).slice().reverse();
@@ -684,17 +792,64 @@ function renderFloor() {
     const label = l.kind === 'disclosure' ? `<span class="down">▼ Disclosure</span> ${esc(DISCLOSURES.find(d => d.id === l.disc)?.label)}`
       : l.kind === 'cut' ? `<span class="down">▼ Guidance cut</span> ${esc(s?.name)}`
       : l.kind === 'milestone' ? `<span class="up">▲ ${esc(s?.milestone)}</span>`
+      : l.kind === 'board' ? `<span style="color:#ffd166">◆ Board block</span> ${esc(s?.name)} · +${(l.value * 100).toFixed(1)}%`
+      : l.kind === 'countermand' ? `<span class="down">◆ Countermand</span> ${esc(s?.name)} · ${l.value ? '−2%' : '1 proxy'}`
       : s?.type === 'cap' ? ((l.under ?? l.value <= s.cap) ? `<span class="up">▲</span> ${esc(s.name)} · under cap` : `<span class="down">▼</span> ${esc(s.name)} · over cap`)
       : `<span class="up">▲</span> ${esc(s?.name)}`;
-    return `<div class="row"><span class="dim" style="font-size:11px">${new Date(l.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false})}</span><span class="grow">${label}</span>${l.kind === 'cut' ? '' : `<button class="x" data-a="undo" data-id="${l.id}" aria-label="Remove">×</button>`}</div>`;
+    return `<div class="row"><span class="dim" style="font-size:11px">${new Date(l.ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false})}</span><span class="grow">${label}</span>${['cut', 'board', 'countermand'].includes(l.kind) ? '' : `<button class="x" data-a="undo" data-id="${l.id}" aria-label="Remove">×</button>`}</div>`;
   }).join('')}</div>`;
   h += `<h2>Wire</h2>${feedList(8)}`;
   return h;
 }
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const proxyLabel = n => `${n} prox${n === 1 ? 'y' : 'ies'}`;
+function renderBoard(w, now) {
+  const px = S.proxies || 0;
+  if (S.block) {
+    const b = S.block, s = segById(b.seg), left = b.end - now, frac = clamp((now - b.start) / (b.end - b.start), 0, 1);
+    return `<h2>Board mandate</h2><div class="card board"><div class="caps dim">${b.countermand ? 'Countermanded block' : 'Resolution of the board'}</div>
+      <div class="bm-seg">${esc(s ? s.name : 'Block')} · ${b.mins} min</div>
+      <div class="big" id="blockLeft">${left > 0 ? mmss(left) : 'TIME'}</div>
+      <div style="margin:6px 0 12px" id="blockBar">${blocks(frac, left > 0 ? 'var(--amber)' : 'var(--up)')}</div>
+      <div class="bm-acts"><button class="btn primary" data-a="done" id="blockDone" ${left > 0 ? 'disabled' : ''}>Done · +${(BLOCK_BONUS[b.mins] * 100).toFixed(1)}%</button><button class="btn" data-a="abandon">Abandon</button></div></div>`;
+  }
+  if (boardUI && boardUI.step === 'pick') return `<h2>Convene the board</h2><div class="card board"><div style="margin-bottom:10px">How much free time do you have?</div>
+    <div class="bm-acts">${[15, 30, 60].map(m => `<button class="btn" data-a="boardMins" data-d="${m}">${m} min</button>`).join('')}</div>
+    <button class="link" style="margin-top:10px" data-a="boardCancel">Never mind</button></div>`;
+  if (boardUI) {
+    const u = boardUI;
+    const votes = u.votes.map(v => { const m = memberById(v.m);
+      return `<div class="vote"><span class="vsq" style="background:${m.color}"></span><div class="grow"><div class="who" style="color:${m.color}">${m.name} <span class="dim">· ${m.role}</span></div>
+        ${esc(BOARD_LINES[v.why][0].replace('{seg}', v.seg.name))}</div><b class="caps">${esc(v.seg.name)}</b></div>`; }).join('');
+    const tail = u.step === 'countermand'
+      ? `<div class="caps dim" style="margin:12px 0 6px">Countermand to (${px ? 'spends 1 proxy' : 'no proxies: costs 2%'}, earns no proxy)</div>
+         <div class="discs">${u.cands.filter(s => s.id !== u.winner.id).map(s => `<button class="kbtn" data-a="countermand" data-id="${s.id}">${esc(s.name)}</button>`).join('') || '<span class="dim">Nothing else is open today.</span>'}</div>
+         <button class="link" style="margin-top:10px" data-a="boardCancel">Never mind</button>`
+      : `<div class="bm-acts" style="margin-top:12px"><button class="btn primary" data-a="accept">Accept mandate</button><button class="btn" data-a="overrule">Countermand</button></div>`;
+    return `<h2>Board vote · ${u.mins} min</h2><div class="card board">${votes}
+      <div class="bm-result">${u.split}: ${esc(u.winner.name)} · ${u.mins} min</div>${tail}</div>`;
+  }
+  return `<button class="btn wide board-btn" data-a="convene">◆ Convene the board <span class="dim">· ${proxyLabel(px)}</span></button>`;
+}
+// keeps a running block's clock current without re-rendering the page; rings once when time is up
+function tickBlock() {
+  const b = S.block, el = document.getElementById('blockLeft');
+  if (!b) return;
+  const left = b.end - Date.now();
+  if (el) {
+    el.textContent = left > 0 ? mmss(left) : 'TIME';
+    document.getElementById('blockBar').innerHTML = blocks(clamp((Date.now() - b.start) / (b.end - b.start), 0, 1), left > 0 ? 'var(--amber)' : 'var(--up)');
+    document.getElementById('blockDone').disabled = left > 0;
+  }
+  if (left <= 0 && !b.rang) { b.rang = true; save(); buzz([200, 100, 200]); toast('Block complete. Tap Done for credit.'); }
+}
 function feedList(n) {
   return `<div class="list feed">${S.feed.slice(-n).reverse().map(e => {
     const f = e.fund && fundById(e.fund);
-    return `<div class="row">${f ? avatar(f.id, 24) : '<span class="sym" style="font-size:9px;margin-top:4px">$CAL</span>'}<div class="grow">${f ? `<div class="who" style="color:${f.color}">${esc(f.name)}</div>` : ''}${esc(e.text)}</div><time>${clock(e.ts)}</time></div>`;
+    const m = e.board && memberById(e.board);
+    const badge = f ? avatar(f.id, 24) : m ? `<span class="vsq" style="background:${m.color};width:10px;height:10px;margin:5px 7px 0"></span>` : '<span class="sym" style="font-size:9px;margin-top:4px">$CAL</span>';
+    const who = f ? `<div class="who" style="color:${f.color}">${esc(f.name)}</div>` : m ? `<div class="who" style="color:${m.color}">${m.name} · Board</div>` : '';
+    return `<div class="row">${badge}<div class="grow">${who}${esc(e.text)}</div><time>${clock(e.ts)}</time></div>`;
   }).join('')}</div>`;
 }
 function renderFunds() {
@@ -847,6 +1002,8 @@ document.addEventListener('change', e => {
 
 // default segments added after launch reach existing installs here (a retired one keeps its id, so it isn't re-added)
 function migrate() {
+  if (S.proxies == null) S.proxies = 0;
+  if (S.block === undefined) S.block = null;
   DEFAULT_SEGMENTS.forEach(d => {
     if (S.segments.some(s => s.id === d.id)) return;
     S.segments.push({...d});
@@ -859,6 +1016,7 @@ function migrate() {
 
 migrate(); catchUp(); evaluate(); save(); render();
 setInterval(() => { hlIdx++; catchUp(); evaluate(); renderTicker(); }, 6000);
+setInterval(tickBlock, 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { catchUp(); evaluate(); render(); } });
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
